@@ -1,8 +1,8 @@
-/********************************************************************************//**
-\file      OVR_CAPI_Prototypes.h
-\brief     Internal CAPI prototype listing macros
-\copyright Copyright 2016 Oculus VR, LLC. All Rights reserved.
-************************************************************************************/
+/********************************************************************************/ /**
+ \file      OVR_CAPI_Prototypes.h
+ \brief     Internal CAPI prototype listing macros
+ \copyright Copyright 2016 Oculus VR, LLC. All Rights reserved.
+ ************************************************************************************/
 
 #ifndef OVR_CAPI_Prototypes_h
 #define OVR_CAPI_Prototypes_h
@@ -19,6 +19,8 @@
 // The tuple passed to either macro is (ReturnType, FunctionName, OptionalVersion, ParameterList)
 //
 
+
+// clang-format off
 
 #define OVR_LIST_PUBLIC_APIS(_,X) \
 X(ovrBool, ovr_InitializeRenderingShimVersion, , (int requestedMinorVersion)) \
@@ -60,8 +62,15 @@ _(int, ovr_TraceMessage, , (int level, const char* message)) \
 _(ovrResult, ovr_IdentifyClient, , (const char* identity)) \
 _(ovrResult, ovr_CreateTextureSwapChainGL, , (ovrSession session, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* outTextureChain)) \
 _(ovrResult, ovr_CreateMirrorTextureGL, , (ovrSession session, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
+_(ovrResult, ovr_CreateMirrorTextureWithOptionsGL, , (ovrSession session, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
 _(ovrResult, ovr_GetTextureSwapChainBufferGL, , (ovrSession session, ovrTextureSwapChain chain, int index, unsigned int* texId)) \
 _(ovrResult, ovr_GetMirrorTextureBufferGL, , (ovrSession session, ovrMirrorTexture mirror, unsigned int* texId)) \
+_(ovrResult, ovr_GetSessionPhysicalDeviceVk, , (ovrSession session, ovrGraphicsLuid luid, VkInstance instance, VkPhysicalDevice* out_physicalDevice)) \
+_(ovrResult, ovr_SetSynchonizationQueueVk, , (ovrSession session, VkQueue queue)) \
+_(ovrResult, ovr_CreateTextureSwapChainVk, , (ovrSession session, VkDevice device, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* out_TextureSwapChain)) \
+_(ovrResult, ovr_GetTextureSwapChainBufferVk, , (ovrSession session, ovrTextureSwapChain chain, int index, VkImage* out_Image)) \
+_(ovrResult, ovr_CreateMirrorTextureWithOptionsVk, , (ovrSession session, VkDevice device, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* out_MirrorTexture)) \
+_(ovrResult, ovr_GetMirrorTextureBufferVk, , (ovrSession session, ovrMirrorTexture mirrorTexture, VkImage* out_Image)) \
 _(ovrResult, ovr_GetTextureSwapChainLength, , (ovrSession session, ovrTextureSwapChain chain, int* length)) \
 _(ovrResult, ovr_GetTextureSwapChainCurrentIndex, , (ovrSession session, ovrTextureSwapChain chain, int* currentIndex)) \
 _(ovrResult, ovr_GetTextureSwapChainDesc, , (ovrSession session, ovrTextureSwapChain chain, ovrTextureSwapChainDesc* desc)) \
@@ -83,12 +92,15 @@ _(ovrResult, ovr_GetBoundaryDimensions, , (ovrSession session, ovrBoundaryType s
 _(ovrResult, ovr_GetBoundaryVisible, , (ovrSession session, ovrBool* outIsVisible)) \
 _(ovrResult, ovr_RequestBoundaryVisible, , (ovrSession session, ovrBool visible)) \
 _(ovrResult, ovr_GetPerfStats, , (ovrSession session, ovrPerfStats* outPerfStats)) \
-_(ovrResult, ovr_ResetPerfStats, , (ovrSession session))
+_(ovrResult, ovr_ResetPerfStats, , (ovrSession session))\
+_(ovrResult, ovr_GetExternalCameras, , (ovrSession session, ovrExternalCamera* outCameras, unsigned int* outCameraCount))\
+_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))
 
 #if defined (_WIN32)
-    #define OVR_LIST_WIN32_APIS(_,X) \
+#define OVR_LIST_WIN32_APIS(_,X) \
     _(ovrResult, ovr_CreateTextureSwapChainDX, , (ovrSession session, IUnknown* d3dPtr, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* outTextureChain)) \
     _(ovrResult, ovr_CreateMirrorTextureDX, , (ovrSession session, IUnknown* d3dPtr, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
+    _(ovrResult, ovr_CreateMirrorTextureWithOptionsDX, , (ovrSession session, IUnknown* d3dPtr, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
     _(ovrResult, ovr_GetTextureSwapChainBufferDX, , (ovrSession session, ovrTextureSwapChain chain, int index, IID iid, void** ppObject)) \
     _(ovrResult, ovr_GetMirrorTextureBufferDX, , (ovrSession session, ovrMirrorTexture mirror, IID iid, void** ppObject)) \
     _(ovrResult, ovr_GetAudioDeviceOutWaveId, , (UINT* deviceOutId)) \
@@ -98,10 +110,10 @@ _(ovrResult, ovr_ResetPerfStats, , (ovrSession session))
     _(ovrResult, ovr_GetAudioDeviceInGuidStr, , (WCHAR* deviceInStrBuffer)) \
     _(ovrResult, ovr_GetAudioDeviceInGuid, , (GUID* deviceInGuid))
 #else
-    #define OVR_LIST_WIN32_APIS(_,X)
+#define OVR_LIST_WIN32_APIS(_,X)
 #endif
 
-    #define OVR_LIST_INTERNAL_APIS(_,X)
+#define OVR_LIST_INTERNAL_APIS(_,X)
 
 // We need to forward declare the ovrSensorData type here, as it won't be in a public OVR_CAPI.h header.
 struct ovrSensorData_;
@@ -111,14 +123,16 @@ typedef struct ovrSensorData_ ovrSensorData;
 _(ovrTrackingState, ovr_GetTrackingStateWithSensorData, , (ovrSession session, double absTime, ovrBool latencyMarker, ovrSensorData* sensorData)) \
 _(ovrResult, ovr_GetDevicePoses, , (ovrSession session, ovrTrackedDeviceType* deviceTypes, int deviceCount, double absTime, ovrPoseStatef* outDevicePoses))
 
+// clang-format on
+
 //
 // OVR_LIST_APIS - master list of all API entrypoints
 //
 
-#define OVR_LIST_APIS(_,X) \
-OVR_LIST_PUBLIC_APIS(_,X) \
-OVR_LIST_WIN32_APIS(_,X) \
-OVR_LIST_INTERNAL_APIS(_,X) \
-OVR_LIST_PRIVATE_APIS(_,X)
+#define OVR_LIST_APIS(_, X)    \
+  OVR_LIST_PUBLIC_APIS(_, X)   \
+  OVR_LIST_WIN32_APIS(_, X)    \
+  OVR_LIST_INTERNAL_APIS(_, X) \
+  OVR_LIST_PRIVATE_APIS(_, X)
 
 #endif // OVR_CAPI_Prototypes_h
