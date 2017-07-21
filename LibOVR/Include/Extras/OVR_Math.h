@@ -75,8 +75,9 @@
 // Independent OVR_MATH_ASSERT implementation for OVR_Math.h.
 
 #if !defined(OVR_MATH_STATIC_ASSERT)
-#if defined(__cplusplus) && ((defined(_MSC_VER) && (defined(_MSC_VER) >= 1600)) || \
-                             defined(__GXX_EXPERIMENTAL_CXX0X__) || (__cplusplus >= 201103L))
+#if defined(__cplusplus) &&                                                                       \
+    ((defined(_MSC_VER) && (defined(_MSC_VER) >= 1600)) || defined(__GXX_EXPERIMENTAL_CXX0X__) || \
+     (__cplusplus >= 201103L))
 #define OVR_MATH_STATIC_ASSERT static_assert
 #else
 #if !defined(OVR_SA_UNUSED)
@@ -1456,7 +1457,7 @@ class Quat {
   // the axis of rotation is the vector normalized,
   // the angle of rotation is the magnitude of the vector.
   Vector3<T> ToRotationVector() const {
-    OVR_MATH_ASSERT(IsNormalized() || LengthSq() == 0);
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
     T s = T(0);
     T sinHalfAngle = sqrt(x * x + y * y + z * z);
     if (sinHalfAngle > T(0)) {
@@ -1475,7 +1476,7 @@ class Quat {
   // Faster version of the above, optimized for use with small rotations, where rotation angle ~=
   // sin(angle)
   inline OVR::Vector3<T> FastToRotationVector() const {
-    OVR_MATH_ASSERT(IsNormalized());
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
     T s;
     T sinHalfSquared = x * x + y * y + z * z;
     if (sinHalfSquared < T(.0037)) // =~ sin(7/2 degrees)^2
@@ -1846,10 +1847,7 @@ class Quat {
   // Rotate transforms vector in a manner that matches Matrix rotations (counter-clockwise,
   // assuming negative direction of the axis). Standard formula: q(t) * V * q(t)^-1.
   Vector3<T> Rotate(const Vector3<T>& v) const {
-    // FIXME: Why the IsNan() test?  This assert should fire in the IsNan() case too!
-    // Someone must have been annoyed by assertion failures and fixed it this way instead of fixing
-    // the root cause.
-    OVR_MATH_ASSERT(IsNan() || IsNormalized());
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
 
     // rv = q * (v,0) * q'
     // Same as rv = v + real * cross(imag,v)*2 + cross(imag, cross(imag,v)*2);
@@ -1868,7 +1866,7 @@ class Quat {
 
   // Rotation by inverse of *this
   Vector3<T> InverseRotate(const Vector3<T>& v) const {
-    OVR_MATH_ASSERT(IsNormalized());
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
 
     // rv = q' * (v,0) * q
     // Same as rv = v + real * cross(-imag,v)*2 + cross(-imag, cross(-imag,v)*2);
@@ -1948,7 +1946,7 @@ class Quat {
   //
   template <Axis A1, Axis A2, Axis A3, RotateDirection D, HandedSystem S>
   void GetEulerAngles(T* a, T* b, T* c) const {
-    OVR_MATH_ASSERT(IsNormalized());
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
     OVR_MATH_STATIC_ASSERT(
         (A1 != A2) && (A2 != A3) && (A1 != A3), "(A1 != A2) && (A2 != A3) && (A1 != A3)");
 
@@ -2011,7 +2009,7 @@ class Quat {
   // Rotations are CCW or CW (D) in LH or RH coordinate system (S)
   template <Axis A1, Axis A2, RotateDirection D, HandedSystem S>
   void GetEulerAnglesABA(T* a, T* b, T* c) const {
-    OVR_MATH_ASSERT(IsNormalized());
+    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
     OVR_MATH_STATIC_ASSERT(A1 != A2, "A1 != A2");
 
     T Q[3] = {x, y, z}; // Quaternion components
@@ -2373,7 +2371,7 @@ class Matrix4 {
   }
 
   explicit Matrix4(const Quat<T>& q) {
-    OVR_MATH_ASSERT(q.IsNormalized());
+    OVR_MATH_ASSERT(q.IsNormalized()); // If this fires, caller has a quat math bug
     T ww = q.w * q.w;
     T xx = q.x * q.x;
     T yy = q.y * q.y;
@@ -3085,7 +3083,7 @@ class Matrix3 {
   }
 
   explicit Matrix3(const Quat<T>& q) {
-    OVR_MATH_ASSERT(q.IsNormalized());
+    OVR_MATH_ASSERT(q.IsNormalized()); // If this fires, caller has a quat math bug
     const T tx = q.x + q.x, ty = q.y + q.y, tz = q.z + q.z;
     const T twx = q.w * tx, twy = q.w * ty, twz = q.w * tz;
     const T txx = q.x * tx, txy = q.x * ty, txz = q.x * tz;

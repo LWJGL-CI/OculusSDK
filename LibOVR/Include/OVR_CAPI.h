@@ -13,6 +13,10 @@
 #include "OVR_Version.h"
 #include "OVR_ErrorCode.h"
 
+#if !defined(_WIN32)
+#include <sys/types.h>
+#endif
+
 
 #include <stdint.h>
 
@@ -598,7 +602,7 @@ typedef struct OVR_ALIGNAS(4) ovrViewScaleDesc_ {
 typedef enum ovrTextureType_ {
   ovrTexture_2D, ///< 2D textures.
   ovrTexture_2D_External, ///< External 2D texture. Not used on PC
-  ovrTexture_Cube, ///< Cube maps. Not currently supported on PC.
+  ovrTexture_Cube, ///< Cube maps.
   ovrTexture_Count,
   ovrTexture_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureType;
@@ -620,6 +624,7 @@ typedef enum ovrTextureBindFlags_ {
   ovrTextureBind_DX_UnorderedAccess = 0x0002,
 
   /// The chain buffers can be bound as depth and/or stencil buffers.
+  /// This flag cannot be combined with ovrTextureBind_DX_RenderTarget.
   ovrTextureBind_DX_DepthStencil = 0x0004,
 
   ovrTextureBind_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
@@ -1369,15 +1374,14 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_IdentifyClient(const char* identity);
 
 /// Returns information about the current HMD.
 ///
-/// ovr_Initialize must have first been called in order for this to succeed, otherwise
-/// ovrHmdDesc::Type
-/// will be reported as ovrHmd_None.
+/// ovr_Initialize must be called prior to calling this function,
+/// otherwise ovrHmdDesc::Type will be set to ovrHmd_None without
+/// checking for the HMD presence.
 ///
-/// \param[in] session Specifies an ovrSession previously returned by ovr_Create, else NULL in which
-///                case this function detects whether an HMD is present and returns its info if so.
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create() or NULL.
 ///
-/// \return Returns an ovrHmdDesc. If the hmd is NULL and ovrHmdDesc::Type is ovrHmd_None then
-///         no HMD is present.
+/// \return Returns an ovrHmdDesc. If invoked with NULL session argument, ovrHmdDesc::Type
+///         set to ovrHmd_None indicates that the HMD is not connected.
 ///
 OVR_PUBLIC_FUNCTION(ovrHmdDesc) ovr_GetHmdDesc(ovrSession session);
 
@@ -2664,6 +2668,47 @@ typedef enum ovrDebugHudStereoMode_ {
 #if !defined(OVR_EXPORTING_CAPI)
 
 // -----------------------------------------------------------------------------------
+/// @name Mixed reality support
+///
+/// Defines functions used for mixed reality / third person cameras.
+///
+//@{
+
+/// Returns the number of camera properties of all cameras
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
+/// \param[in out] supply the array capacity, will return the actual # of cameras defined
+/// \param[in out] cameras the array.  If null or *inoutCameraCount is too small, will return
+///                ovrError_InsufficientArraySize
+/// \return Returns the ids of external cameras the system knows about. Returns
+///            ovrError_NoExternalCameraInfo if there is not any eternal camera information.
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetExternalCameras(
+    ovrSession session,
+    ovrExternalCamera* cameras,
+    unsigned int* inoutCameraCount);
+
+/// Sets the camera intrinsics and/or extrinsics stored for the cameraName camera
+/// Names must be < 32 characters and null-terminated.
+///
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
+/// \param[in] name Specifies which camera to set the intrinsics or extrinsics for
+/// \param[in] intrinsics Contains the intrinsic parameters to set, can be null
+/// \param[in] extrinsics Contains the extrinsic parameters to set, can be null
+/// \return Returns ovrSuccess or an ovrError code
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_SetExternalCameraProperties(
+    ovrSession session,
+    const char* name,
+    const ovrCameraIntrinsics* const intrinsics,
+    const ovrCameraExtrinsics* const extrinsics);
+
+///@}
+
+#endif // OVR_EXPORTING_CAPI
+
+#if !defined(OVR_EXPORTING_CAPI)
+
+// -----------------------------------------------------------------------------------
 /// @name Property Access
 ///
 /// These functions read and write OVR properties. Supported properties
@@ -2785,34 +2830,6 @@ ovr_GetString(ovrSession session, const char* propertyName, const char* defaultV
 ///         property name is empty or if the property is read-only.
 OVR_PUBLIC_FUNCTION(ovrBool)
 ovr_SetString(ovrSession session, const char* propertyName, const char* value);
-
-/// Returns the number of camera properties of all cameras
-/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in out] supply the array capacity, will return the actual # of cameras defined
-/// \param[in out] cameras the array.  If null or *inoutCameraCount is too small, will return
-///                ovrError_InsufficientArraySize
-/// \return Returns the ids of external cameras the system knows about. Returns
-///            ovrError_NoExternalCameraInfo if thers is not any eternal camera information.
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_GetExternalCameras(
-    ovrSession session,
-    ovrExternalCamera* cameras,
-    unsigned int* inoutCameraCount);
-
-/// Sets the camera intrinsics and/or extrinsics stored for the cameraName camera
-/// Names must be < 32 characters and null-terminated.
-///
-/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in] name Specifies which camera to set the intrinsics or extrinsics for
-/// \param[in] intrinsics Contains the intrinsic parameters to set, can be null
-/// \param[in] extrinsics Contains the extrinsic parameters to set, can be null
-/// \return Returns ovrSuccess or an ovrError code
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_SetExternalCameraProperties(
-    ovrSession session,
-    const char* name,
-    const ovrCameraIntrinsics* const intrinsics,
-    const ovrCameraExtrinsics* const extrinsics);
 
 ///@}
 

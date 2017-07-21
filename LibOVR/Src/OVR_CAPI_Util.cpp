@@ -125,12 +125,12 @@ ovrMatrix4f_OrthoSubProjection(
   //    = x0 * 2*orthoHalfFov/FovPixels + orthoHorizontalOffset;
   // But then we need the same mapping as the existing projection matrix, i.e.
   // x2 = x1 * Projection.M[0][0] + Projection.M[0][2];
-  //    = x0 * (2*orthoHalfFov/FovPixels + orthoHorizontalOffset) * Projection.M[0][0] +
-  Projection.M[0][2];
+//    = x0 * (2*orthoHalfFov/FovPixels + orthoHorizontalOffset) * Projection.M[0][0] +
+Projection.M[0][2];
   //    = x0 * Projection.M[0][0]*2*orthoHalfFov/FovPixels +
   //      orthoHorizontalOffset*Projection.M[0][0] + Projection.M[0][2];
-  // So in the new projection matrix we need to scale by Projection.M[0][0]*2*orthoHalfFov/FovPixels
-  and
+// So in the new projection matrix we need to scale by Projection.M[0][0]*2*orthoHalfFov/FovPixels
+and
   // offset by orthoHorizontalOffset*Projection.M[0][0] + Projection.M[0][2].
   */
 
@@ -218,6 +218,8 @@ OVR_PUBLIC_FUNCTION(ovrDetectResult) ovr_Detect(int timeoutMilliseconds) {
 
     ::CloseHandle(hServiceEvent);
   }
+#else
+  (void)timeoutMilliseconds;
 #endif // _WIN32
 
 
@@ -281,7 +283,7 @@ ovr_GenHapticsFromAudioData(
   for (int32_t i = 0; i < hapticsSampleCount; ++i) {
     float sample = audioChannel->Samples[(int32_t)(i * samplesPerStep)];
     uint8_t hapticSample =
-        (uint8_t)std::min(UCHAR_MAX, (int)round(abs(sample) * kHapticsMaxAmplitude));
+        (uint8_t)std::min(UCHAR_MAX, (int)round(fabs(sample) * kHapticsMaxAmplitude));
     hapticsSamples[i] = hapticSample;
   }
 
@@ -386,7 +388,7 @@ OVR_PUBLIC_FUNCTION(void) ovr_ReleaseAudioChannelData(ovrAudioChannelData* audio
 
 OVR_PUBLIC_FUNCTION(void) ovr_ReleaseHapticsClip(ovrHapticsClip* hapticsClip) {
   if (hapticsClip != nullptr && hapticsClip->Samples != nullptr) {
-    delete[] hapticsClip->Samples;
+    delete[](uint8_t*) hapticsClip->Samples;
     memset(hapticsClip, 0, sizeof(ovrHapticsClip));
   }
 }

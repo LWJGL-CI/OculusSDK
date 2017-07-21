@@ -1126,7 +1126,7 @@ ModuleHandleType ovr_GetLibOVRRTHandle() {
 // union
 //
 
-static struct { OVR_LIST_APIS(OVR_DECLARE_IMPORT, OVR_IGNORE_IMPORT) } API = {NULL};
+static struct { OVR_LIST_APIS(OVR_DECLARE_IMPORT, OVR_IGNORE_IMPORT) } API = {{NULL}};
 
 static void OVR_UnloadSharedLibrary() {
   memset(&API, 0, sizeof(API));
