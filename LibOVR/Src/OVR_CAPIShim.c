@@ -65,41 +65,14 @@ limitations under the License.
 #pragma warning(disable : 4996) // 'getenv': This function or variable may be unsafe.
 #endif
 
-static const uint8_t OculusSDKUniqueIdentifier[] = {0x9E,
-                                                    0xB2,
-                                                    0x0B,
-                                                    0x1A,
-                                                    0xB7,
-                                                    0x97,
-                                                    0x09,
-                                                    0x20,
-                                                    0xE0,
-                                                    0xFB,
-                                                    0x83,
-                                                    0xED,
-                                                    0xF8,
-                                                    0x33,
-                                                    0x5A,
-                                                    0xEB,
-                                                    0x80,
-                                                    0x4D,
-                                                    0x8E,
-                                                    0x92,
-                                                    0x20,
-                                                    0x69,
-                                                    0x13,
-                                                    0x56,
-                                                    0xB4,
-                                                    0xBB,
-                                                    0xC4,
-                                                    0x85,
-                                                    0xA7,
-                                                    0x9E,
-                                                    0xA4,
-                                                    0xFE,
-                                                    OVR_MAJOR_VERSION,
-                                                    OVR_MINOR_VERSION,
-                                                    OVR_PATCH_VERSION};
+// clang-format off
+static const uint8_t OculusSDKUniqueIdentifier[] = {
+  0x9E, 0xB2, 0x0B, 0x1A, 0xB7, 0x97, 0x09, 0x20, 0xE0, 0xFB, 0x83, 0xED, 0xF8, 0x33, 0x5A, 0xEB,
+  0x80, 0x4D, 0x8E, 0x92, 0x20, 0x69, 0x13, 0x56, 0xB4, 0xBB, 0xC4, 0x85, 0xA7, 0x9E, 0xA4, 0xFE,
+  OVR_MAJOR_VERSION, OVR_MINOR_VERSION, OVR_PATCH_VERSION
+};
+
+// clang-format on
 
 static const uint8_t OculusSDKUniqueIdentifierXORResult = 0xcb;
 
@@ -683,11 +656,7 @@ static ModuleHandleType OVR_OpenLibrary(const FilePathCharType* libraryPath, ovr
   void* lib = dlopen(libraryPath, RTLD_NOW | RTLD_LOCAL);
 
   if (!lib) {
-#if defined(__APPLE__)
-// TODO: Output the error in whatever logging system OSX uses (jhughes)
-#else // __APPLE__
     fprintf(stderr, "ERROR: Can't load '%s':\n%s\n", libraryPath, dlerror());
-#endif // __APPLE__
   }
 
   return lib;
@@ -802,7 +771,7 @@ static ModuleHandleType OVR_FindLibraryPath(
 
     // We assume that __FILE__ returns a full path, which isn't the case for some compilers.
     // Need to compile with /FC under VC++ for __FILE__ to expand to the full file path.
-    // clang expands __FILE__ to a full path by default.
+    // NOTE: This needs to be fixed on Mac. __FILE__ is not expanded to full path under clang.
     OVR_strlcpy(sdkRoot, __FILE__, sizeof(sdkRoot));
     for (i = 0; sdkRoot[i]; ++i)
       sdkRoot[i] = (char)tolower(sdkRoot[i]); // Microsoft doesn't maintain case.
@@ -868,7 +837,7 @@ static ModuleHandleType OVR_FindLibraryPath(
       const char* pCompilerVersion = "VS2012";
 #elif defined(_MSC_VER) && (_MSC_VER == 1800)
       const char* pCompilerVersion = "VS2013";
-#elif defined(_MSC_VER) && (_MSC_VER == 1900)
+#elif defined(_MSC_VER) && (_MSC_VER >= 1900)
       const char* pCompilerVersion = "VS2015";
 #endif
 
@@ -1236,12 +1205,23 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_Initialize(const ovrInitParams* inputParams) 
 
 
 
+  // Error out if the requested minor version is less than our lowest deemed compatible version
+  // denoted by OVR_MIN_REQUESTABLE_MINOR_VERSION.
+  // Note: This code has to be in the shim as we want to enforce usage of the new API versions for
+  // applications being recompiled while maintaining backwards compatibility with older apps
+  if (params.RequestedMinorVersion < OVR_MIN_REQUESTABLE_MINOR_VERSION) {
+    // Requested LibOVRRT version too low
+    result = ovrError_LibVersion;
+    return result;
+  }
+
   // By design we ignore the build version in the library search.
   result = OVR_LoadSharedLibrary(OVR_PRODUCT_VERSION, OVR_MAJOR_VERSION);
   if (result != ovrSuccess)
     return result;
 
   result = API.ovr_Initialize.Ptr(&params);
+
   if (result != ovrSuccess)
     OVR_UnloadSharedLibrary();
 
@@ -1351,6 +1331,8 @@ ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
       sessionStatus->ShouldQuit = ovrFalse;
       sessionStatus->DisplayLost = ovrFalse;
       sessionStatus->ShouldRecenter = ovrFalse;
+      sessionStatus->Internal[0] = ovrFalse;
+      sessionStatus->Internal[1] = ovrFalse;
     }
 
     return ovrError_NotInitialized;
@@ -1756,6 +1738,28 @@ ovr_GetMirrorTextureBufferGL(ovrSession session, ovrMirrorTexture mirror, unsign
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetInstanceExtensionsVk(
+    ovrGraphicsLuid luid,
+    char* extensionNames,
+    uint32_t* inoutExtensionNamesSize) {
+  if (!API.ovr_GetInstanceExtensionsVk.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_GetInstanceExtensionsVk.Ptr(luid, extensionNames, inoutExtensionNamesSize);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetDeviceExtensionsVk(
+    ovrGraphicsLuid luid,
+    char* extensionNames,
+    uint32_t* inoutExtensionNamesSize) {
+  if (!API.ovr_GetDeviceExtensionsVk.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_GetDeviceExtensionsVk.Ptr(luid, extensionNames, inoutExtensionNamesSize);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetSessionPhysicalDeviceVk(
     ovrSession session,
     ovrGraphicsLuid luid,
@@ -1873,6 +1877,35 @@ ovr_DestroyMirrorTexture(ovrSession session, ovrMirrorTexture mirrorTexture) {
     return;
 
   API.ovr_DestroyMirrorTexture.Ptr(session, mirrorTexture);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_WaitToBeginFrame(ovrSession session, long long frameIndex) {
+  if (!API.ovr_WaitToBeginFrame.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_WaitToBeginFrame.Ptr(session, frameIndex);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_BeginFrame(ovrSession session, long long frameIndex) {
+  if (!API.ovr_BeginFrame.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_BeginFrame.Ptr(session, frameIndex);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_EndFrame(
+    ovrSession session,
+    long long frameIndex,
+    const ovrViewScaleDesc* viewScaleDesc,
+    ovrLayerHeader const* const* layerPtrList,
+    unsigned int layerCount) {
+  if (!API.ovr_EndFrame.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_EndFrame.Ptr(session, frameIndex, viewScaleDesc, layerPtrList, layerCount);
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)

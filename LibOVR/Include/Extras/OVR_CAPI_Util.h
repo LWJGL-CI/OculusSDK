@@ -169,21 +169,25 @@ ovrMatrix4f_OrthoSubProjection(
 /// Computes offset eye poses based on headPose returned by ovrTrackingState.
 ///
 /// \param[in] headPose Indicates the HMD position and orientation to use for the calculation.
-/// \param[in] hmdToEyeOffset Can be ovrEyeRenderDesc.HmdToEyeOffset returned from
-///            ovr_GetRenderDesc. For monoscopic rendering, use a vector that is the average
-///            of the two vectors for both eyes.
+/// \param[in] hmdToEyePose Can be ovrEyeRenderDesc.HmdToEyePose returned from
+///            ovr_GetRenderDesc. For monoscopic rendering, use a position vector that is average
+///            of the two position vectors for each eyes.
 /// \param[out] outEyePoses If outEyePoses are used for rendering, they should be passed to
 ///             ovr_SubmitFrame in ovrLayerEyeFov::RenderPose or ovrLayerEyeFovDepth::RenderPose.
 ///
+#undef ovr_CalcEyePoses
 OVR_PUBLIC_FUNCTION(void)
 ovr_CalcEyePoses(ovrPosef headPose, const ovrVector3f hmdToEyeOffset[2], ovrPosef outEyePoses[2]);
+OVR_PRIVATE_FUNCTION(void)
+ovr_CalcEyePoses2(ovrPosef headPose, const ovrPosef HmdToEyePose[2], ovrPosef outEyePoses[2]);
+#define ovr_CalcEyePoses ovr_CalcEyePoses2
 
 /// Returns the predicted head pose in outHmdTrackingState and offset eye poses in outEyePoses.
 ///
 /// This is a thread-safe function where caller should increment frameIndex with every frame
 /// and pass that index where applicable to functions called on the rendering thread.
 /// Assuming outEyePoses are used for rendering, it should be passed as a part of ovrLayerEyeFov.
-/// The caller does not need to worry about applying HmdToEyeOffset to the returned outEyePoses
+/// The caller does not need to worry about applying HmdToEyePose to the returned outEyePoses
 /// variables.
 ///
 /// \param[in]  hmd Specifies an ovrSession previously returned by ovr_Create.
@@ -192,13 +196,14 @@ ovr_CalcEyePoses(ovrPosef headPose, const ovrVector3f hmdToEyeOffset[2], ovrPose
 /// \param[in]  latencyMarker Specifies that this call is the point in time where
 ///             the "App-to-Mid-Photon" latency timer starts from. If a given ovrLayer
 ///             provides "SensorSampleTimestamp", that will override the value stored here.
-/// \param[in]  hmdToEyeOffset Can be ovrEyeRenderDesc.HmdToEyeOffset returned from
-///             ovr_GetRenderDesc. For monoscopic rendering, use a vector that is the average
-///             of the two vectors for both eyes.
+/// \param[in]  hmdToEyePose Can be ovrEyeRenderDesc.HmdToEyePose returned from
+///             ovr_GetRenderDesc. For monoscopic rendering, use a position vector that is average
+///             of the two position vectors for each eyes.
 /// \param[out] outEyePoses The predicted eye poses.
 /// \param[out] outSensorSampleTime The time when this function was called. May be NULL, in which
 /// case it is ignored.
 ///
+#undef ovr_GetEyePoses
 OVR_PUBLIC_FUNCTION(void)
 ovr_GetEyePoses(
     ovrSession session,
@@ -207,6 +212,15 @@ ovr_GetEyePoses(
     const ovrVector3f hmdToEyeOffset[2],
     ovrPosef outEyePoses[2],
     double* outSensorSampleTime);
+OVR_PRIVATE_FUNCTION(void)
+ovr_GetEyePoses2(
+    ovrSession session,
+    long long frameIndex,
+    ovrBool latencyMarker,
+    const ovrPosef HmdToEyePose[2],
+    ovrPosef outEyePoses[2],
+    double* outSensorSampleTime);
+#define ovr_GetEyePoses ovr_GetEyePoses2
 
 /// Tracking poses provided by the SDK come in a right-handed coordinate system. If an application
 /// is passing in ovrProjection_LeftHanded into ovrMatrix4f_Projection, then it should also use

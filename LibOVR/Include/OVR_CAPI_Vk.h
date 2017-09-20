@@ -16,6 +16,78 @@
 //-----------------------------------------------------------------------------------
 // ***** Vulkan Specific
 
+/// Get a list of Vulkan vkInstance extensions required for VR.
+///
+/// Returns a list of strings delimited by a single space identifying Vulkan extensions that must
+/// be enabled in order for the VR runtime to support Vulkan-based applications. The returned
+/// list reflects the current runtime version and the GPU the VR system is currently connected to.
+///
+/// \param[in]  luid Specifies the luid for the relevant GPU, which is returned from ovr_Create.
+/// \param[in]  extensionNames is a character buffer which will receive a list of extension name
+///               strings, separated by a single space char between each extension.
+/// \param[in]  inoutExtensionNamesSize indicates on input the capacity of extensionNames in chars.
+///               On output it returns the number of characters written to extensionNames,
+///               including the terminating 0 char. In the case of this function returning
+///               ovrError_InsufficientArraySize, the required inoutExtensionNamesSize is returned.
+///
+/// \return Returns an ovrResult indicating success or failure. In the case of failure, use
+///         ovr_GetLastErrorInfo to get more information. Returns ovrError_InsufficientArraySize in
+///         the case that inoutExtensionNameSize didn't have enough space, in which case
+///         inoutExtensionNameSize will return the required inoutExtensionNamesSize.
+///
+/// <b>Example code</b>
+///     \code{.cpp}
+///         char extensionNames[4096];
+///         uint32_t extensionNamesSize = sizeof(extensionNames);
+///         ovr_GetInstanceExtensionsVk(luid, extensionsnames, &extensionNamesSize);
+///
+///         uint32_t extensionCount = 0;
+///         const char* extensionNamePtrs[256];
+///         for(const char* p = extensionNames; *p; ++p) {
+///             if((p == extensionNames) || (p[-1] == ' ')) {
+///                 extensionNamePtrs[extensionCount++] = p;
+///                 if (p[-1] == ' ')
+///                     p[-1] = '\0';
+///             }
+///         }
+///
+///         VkInstanceCreateInfo info = { ... };
+///         info.enabledExtensionCount = extensionCount;
+///         info.ppEnabledExtensionNames = extensionNamePtrs;
+///         [...]
+///     \endcode
+///
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetInstanceExtensionsVk(
+    ovrGraphicsLuid luid,
+    char* extensionNames,
+    uint32_t* inoutExtensionNamesSize);
+
+/// Get a list of Vulkan vkDevice extensions required for VR.
+///
+/// Returns a list of strings delimited by a single space identifying Vulkan extensions that must
+/// be enabled in order for the VR runtime to support Vulkan-based applications. The returned
+/// list reflects the current runtime version and the GPU the VR system is currently connected to.
+///
+/// \param[in]  luid Specifies the luid for the relevant GPU, which is returned from ovr_Create.
+/// \param[in]  extensionNames is a character buffer which will receive a list of extension name
+///               strings, separated by a single space char between each extension.
+/// \param[in]  inoutExtensionNamesSize indicates on input the capacity of extensionNames in chars.
+///               On output it returns the number of characters written to extensionNames,
+///               including the terminating 0 char. In the case of this function returning
+///               ovrError_InsufficientArraySize, the required inoutExtensionNamesSize is returned.
+///
+/// \return Returns an ovrResult indicating success or failure. In the case of failure, use
+///         ovr_GetLastErrorInfo to get more information. Returns ovrError_InsufficientArraySize in
+///         the case that inoutExtensionNameSize didn't have enough space, in which case
+///         inoutExtensionNameSize will return the required inoutExtensionNamesSize.
+///
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetDeviceExtensionsVk(
+    ovrGraphicsLuid luid,
+    char* extensionNames,
+    uint32_t* inoutExtensionNamesSize);
+
 /// Find VkPhysicalDevice matching ovrGraphicsLuid
 ///
 /// \param[in]  session Specifies an ovrSession previously returned by ovr_Create.
@@ -31,6 +103,7 @@
 /// ovr_CreateMirrorTextureWithOptionsVk calls, and the instance must remain valid for the lifetime
 /// of the returned objects. It is assumed the VkDevice created by the application will be for the
 /// returned physical device.
+///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetSessionPhysicalDeviceVk(
     ovrSession session,

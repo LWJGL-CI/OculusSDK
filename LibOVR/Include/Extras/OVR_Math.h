@@ -4186,6 +4186,40 @@ struct FovPort {
         OVRMath_Max(a.RightTan, b.RightTan));
     return fov;
   }
+
+  static FovPort Uncant(const FovPort& cantedFov, Quatf canting) {
+    FovPort uncantedFov = cantedFov;
+
+    // make 3D vectors from the FovPorts projected to z=1 plane
+    Vector3f leftUp = Vector3f(cantedFov.LeftTan, cantedFov.UpTan, 1.0f);
+    Vector3f rightUp = Vector3f(-cantedFov.RightTan, cantedFov.UpTan, 1.0f);
+    Vector3f leftDown = Vector3f(cantedFov.LeftTan, -cantedFov.DownTan, 1.0f);
+    Vector3f rightDown = Vector3f(-cantedFov.RightTan, -cantedFov.DownTan, 1.0f);
+
+    // rotate these vectors using the canting specified
+    leftUp = canting.Rotate(leftUp);
+    rightUp = canting.Rotate(rightUp);
+    leftDown = canting.Rotate(leftDown);
+    rightDown = canting.Rotate(rightDown);
+
+    // If the z coordinates of any of the corners end up being really small or negative, then
+    // projection will generate extremely large or inverted frustums and we don't really want that
+    const float kMinValidZ = 0.01f;
+
+    // re-project back to z=1 plane while making sure we don't generate gigantic values (hence max)
+    leftUp /= OVRMath_Max(leftUp.z, kMinValidZ);
+    rightUp /= OVRMath_Max(rightUp.z, kMinValidZ);
+    leftDown /= OVRMath_Max(leftDown.z, kMinValidZ);
+    rightDown /= OVRMath_Max(rightDown.z, kMinValidZ);
+
+    // generate new FovTans as "bounding box" values
+    uncantedFov.UpTan = OVRMath_Max(leftUp.y, rightUp.y);
+    uncantedFov.DownTan = OVRMath_Max(-leftDown.y, -rightDown.y);
+    uncantedFov.LeftTan = OVRMath_Max(leftUp.x, leftDown.x);
+    uncantedFov.RightTan = OVRMath_Max(-rightDown.x, -rightUp.x);
+
+    return uncantedFov;
+  }
 };
 
 } // Namespace OVR

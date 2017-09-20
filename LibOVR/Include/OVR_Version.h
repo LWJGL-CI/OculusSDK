@@ -18,7 +18,7 @@
 #define OVR_PRODUCT_VERSION 1 // Product version doesn't participate in semantic versioning.
 #define OVR_MAJOR_VERSION 1 // If you change these values then you need to also make sure to change
 // LibOVR/Projects/Windows/LibOVR.props in parallel.
-#define OVR_MINOR_VERSION 16 //
+#define OVR_MINOR_VERSION 18 //
 #define OVR_PATCH_VERSION 0
 #define OVR_BUILD_NUMBER 0
 
@@ -28,6 +28,10 @@
 // The DLL is responsible for checking that the service is the version it supports
 // and returning an appropriate error message if it has not been made compatible.
 #define OVR_DLL_COMPATIBLE_VERSION 101
+
+// This is the minor version representing the minimum version an application can query with this
+// SDK. Calls ovr_Initialize will fail if the application requests a version that is less than this.
+#define OVR_MIN_REQUESTABLE_MINOR_VERSION 17
 
 #define OVR_FEATURE_VERSION 0
 

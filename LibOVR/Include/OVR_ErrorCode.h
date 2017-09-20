@@ -125,6 +125,9 @@ typedef enum ovrErrorType_ {
   /// There is not any external camera information stored by ovrServer.
   ovrError_NoExternalCameraInfo = -1017,
 
+  /// Tracking is lost when ovr_GetDevicePoses() is called.
+  ovrError_LostTracking = -1018,
+
   /*************************************************/
   /* Audio error range, reserved for Audio errors. */
   /*************************************************/

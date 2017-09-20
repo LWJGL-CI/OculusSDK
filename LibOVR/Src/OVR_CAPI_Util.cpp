@@ -111,7 +111,6 @@ ovrMatrix4f_OrthoSubProjection(
   // to the camera.
   float orthoHorizontalOffset = -hmdToEyeOffsetX / orthoDistance;
 
-  /*
   // Current projection maps real-world vector (x,y,1) to the RT.
   // We want to find the projection that maps the range [-FovPixels/2,FovPixels/2] to
   // the physical [-orthoHalfFov,orthoHalfFov]
@@ -125,14 +124,11 @@ ovrMatrix4f_OrthoSubProjection(
   //    = x0 * 2*orthoHalfFov/FovPixels + orthoHorizontalOffset;
   // But then we need the same mapping as the existing projection matrix, i.e.
   // x2 = x1 * Projection.M[0][0] + Projection.M[0][2];
-//    = x0 * (2*orthoHalfFov/FovPixels + orthoHorizontalOffset) * Projection.M[0][0] +
-Projection.M[0][2];
-  //    = x0 * Projection.M[0][0]*2*orthoHalfFov/FovPixels +
+  //    = x0 * (2*orthoHalfFov/FovPixels + orthoHorizontalOffset) * Projection.M[0][0] +
+  //    Projection.M[0][2]; = x0 * Projection.M[0][0]*2*orthoHalfFov/FovPixels +
   //      orthoHorizontalOffset*Projection.M[0][0] + Projection.M[0][2];
-// So in the new projection matrix we need to scale by Projection.M[0][0]*2*orthoHalfFov/FovPixels
-and
-  // offset by orthoHorizontalOffset*Projection.M[0][0] + Projection.M[0][2].
-  */
+  // So in the new projection matrix we need to scale by Projection.M[0][0]*2*orthoHalfFov/FovPixels
+  // and offset by orthoHorizontalOffset*Projection.M[0][0] + Projection.M[0][2].
 
   ortho.M[0][0] = projection.M[0][0] * orthoScale.x;
   ortho.M[0][1] = 0.0f;
@@ -159,6 +155,7 @@ and
   return ortho;
 }
 
+#undef ovr_CalcEyePoses
 OVR_PUBLIC_FUNCTION(void)
 ovr_CalcEyePoses(ovrPosef headPose, const ovrVector3f hmdToEyeOffset[2], ovrPosef outEyePoses[2]) {
   if (!hmdToEyeOffset || !outEyePoses) {
@@ -175,6 +172,20 @@ ovr_CalcEyePoses(ovrPosef headPose, const ovrVector3f hmdToEyeOffset[2], ovrPose
       Posef(headPose.Orientation, ((Posef)headPose).Apply((Vector3f)hmdToEyeOffset[1]));
 }
 
+OVR_PRIVATE_FUNCTION(void)
+ovr_CalcEyePoses2(ovrPosef headPose, const ovrPosef hmdToEyePose[2], ovrPosef outEyePoses[2]) {
+  if (!hmdToEyePose || !outEyePoses) {
+    return;
+  }
+
+  using OVR::Posef;
+  using OVR::Vector3f;
+
+  outEyePoses[0] = (Posef)headPose * (Posef)hmdToEyePose[0];
+  outEyePoses[1] = (Posef)headPose * (Posef)hmdToEyePose[1];
+}
+
+#undef ovr_GetEyePoses
 OVR_PUBLIC_FUNCTION(void)
 ovr_GetEyePoses(
     ovrSession session,
@@ -186,6 +197,23 @@ ovr_GetEyePoses(
   double frameTime = ovr_GetPredictedDisplayTime(session, frameIndex);
   ovrTrackingState trackingState = ovr_GetTrackingState(session, frameTime, latencyMarker);
   ovr_CalcEyePoses(trackingState.HeadPose.ThePose, hmdToEyeOffset, outEyePoses);
+
+  if (outSensorSampleTime != nullptr) {
+    *outSensorSampleTime = ovr_GetTimeInSeconds();
+  }
+}
+
+OVR_PRIVATE_FUNCTION(void)
+ovr_GetEyePoses2(
+    ovrSession session,
+    long long frameIndex,
+    ovrBool latencyMarker,
+    const ovrPosef hmdToEyePose[2],
+    ovrPosef outEyePoses[2],
+    double* outSensorSampleTime) {
+  double frameTime = ovr_GetPredictedDisplayTime(session, frameIndex);
+  ovrTrackingState trackingState = ovr_GetTrackingState(session, frameTime, latencyMarker);
+  ovr_CalcEyePoses2(trackingState.HeadPose.ThePose, hmdToEyePose, outEyePoses);
 
   if (outSensorSampleTime != nullptr) {
     *outSensorSampleTime = ovr_GetTimeInSeconds();

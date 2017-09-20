@@ -497,20 +497,29 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrTrackerDesc_ {
 ///  /see ovrTrackerPose
 ///
 typedef enum ovrTrackerFlags_ {
-  ovrTracker_Connected = 0x0020, ///< The sensor is present, else the sensor is absent or offline.
-  ovrTracker_PoseTracked = 0x0004 ///< The sensor has a valid pose, else the pose is unavailable.
-  ///< This will only be set if ovrTracker_Connected is set.
+  /// The sensor is present, else the sensor is absent or offline.
+  ovrTracker_Connected = 0x0020,
+
+  /// The sensor has a valid pose, else the pose is unavailable.
+  /// This will only be set if ovrTracker_Connected is set.
+  ovrTracker_PoseTracked = 0x0004
 } ovrTrackerFlags;
 
 ///  Specifies the pose for a single sensor.
 ///
 typedef struct OVR_ALIGNAS(8) _ovrTrackerPose {
-  unsigned int TrackerFlags; ///< ovrTrackerFlags.
-  ovrPosef Pose; ///< The sensor's pose. This pose includes sensor tilt (roll and pitch).
-  ///< For a leveled coordinate system use LeveledPose.
-  ovrPosef LeveledPose; ///< The sensor's leveled pose, aligned with gravity. This value includes
-  ///< pos and yaw of the sensor, but not roll and pitch. It can be used as
-  ///< a reference point to render real-world objects in the correct location.
+  /// ovrTrackerFlags.
+  unsigned int TrackerFlags;
+
+  /// The sensor's pose. This pose includes sensor tilt (roll and pitch).
+  /// For a leveled coordinate system use LeveledPose.
+  ovrPosef Pose;
+
+  /// The sensor's leveled pose, aligned with gravity. This value includes pos and yaw of the
+  /// sensor, but not roll and pitch. It can be used as a reference point to render real-world
+  /// objects in the correct location.
+  ovrPosef LeveledPose;
+
   OVR_UNUSED_STRUCT_PAD(pad0, 4) ///< \internal struct pad.
 } ovrTrackerPose;
 
@@ -547,6 +556,7 @@ typedef struct OVR_ALIGNAS(8) ovrTrackingState_ {
 } ovrTrackingState;
 
 
+
 /// Rendering information for each eye. Computed by ovr_GetRenderDesc() based on the
 /// specified FOV. Note that the rendering viewport is not included
 /// here as it can be specified separately and modified per frame by
@@ -559,7 +569,7 @@ typedef struct OVR_ALIGNAS(4) ovrEyeRenderDesc_ {
   ovrFovPort Fov; ///< The field of view.
   ovrRecti DistortedViewport; ///< Distortion viewport.
   ovrVector2f PixelsPerTanAngleAtCenter; ///< How many display pixels will fit in tan(angle) = 1.
-  ovrVector3f HmdToEyeOffset; ///< Translation of each eye, in meters.
+  ovrPosef HmdToEyePose; ///< Transform of eye from the HMD center, in meters.
 } ovrEyeRenderDesc;
 
 /// Projection information for ovrLayerEyeFovDepth.
@@ -575,8 +585,11 @@ typedef struct OVR_ALIGNAS(4) ovrTimewarpProjectionDesc_ {
   float Projection32; ///< Projection matrix element [3][2].
 } ovrTimewarpProjectionDesc;
 
+
 /// Contains the data necessary to properly calculate position info for various layer types.
-/// - HmdToEyeOffset is the same value pair provided in ovrEyeRenderDesc.
+/// - HmdToEyePose is the same value-pair provided in ovrEyeRenderDesc. Modifying this value is
+///   suggested only if the app is forcing monoscopic rendering and requires that all layers
+///   including quad layers show up in a monoscopic fashion.
 /// - HmdSpaceToWorldScaleInMeters is used to scale player motion into in-application units.
 ///   In other words, it is how big an in-application unit is in the player's physical meters.
 ///   For example, if the application uses inches as its units then HmdSpaceToWorldScaleInMeters
@@ -588,7 +601,7 @@ typedef struct OVR_ALIGNAS(4) ovrTimewarpProjectionDesc_ {
 /// \see ovrEyeRenderDesc, ovr_SubmitFrame
 ///
 typedef struct OVR_ALIGNAS(4) ovrViewScaleDesc_ {
-  ovrVector3f HmdToEyeOffset[ovrEye_Count]; ///< Translation of each eye.
+  ovrPosef HmdToEyePose[ovrEye_Count]; ///< Transform of each eye from the HMD center, in meters.
   float HmdSpaceToWorldScaleInMeters; ///< Ratio of viewer units to meter units.
 } ovrViewScaleDesc;
 
@@ -601,8 +614,8 @@ typedef struct OVR_ALIGNAS(4) ovrViewScaleDesc_ {
 ///
 typedef enum ovrTextureType_ {
   ovrTexture_2D, ///< 2D textures.
-  ovrTexture_2D_External, ///< External 2D texture. Not used on PC
-  ovrTexture_Cube, ///< Cube maps.
+  ovrTexture_2D_External, ///< Application-provided 2D texture. Not supported on PC.
+  ovrTexture_Cube, ///< Cube maps. ovrTextureSwapChainDesc::ArraySize must be 6 for this type.
   ovrTexture_Count,
   ovrTexture_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureType;
@@ -701,13 +714,13 @@ typedef enum ovrTextureMiscFlags_ {
 /// \see ovr_CreateTextureSwapChainGL
 ///
 typedef struct ovrTextureSwapChainDesc_ {
-  ovrTextureType Type;
+  ovrTextureType Type; ///< Must not be ovrTexture_Window
   ovrTextureFormat Format;
-  int ArraySize; ///< Only supported with ovrTexture_2D. Not supported on PC at this time.
+  int ArraySize; ///< Must be 6 for ovrTexture_Cube, 1 for other types.
   int Width;
   int Height;
   int MipLevels;
-  int SampleCount; ///< Current only supported on depth textures
+  int SampleCount; ///< Only supported with depth textures.
   ovrBool StaticImage; ///< Not buffered in a chain. For images that don't change
   unsigned int MiscFlags; ///< ovrTextureFlags
   unsigned int BindFlags; ///< ovrTextureBindFlags. Not used for GL.
@@ -893,11 +906,14 @@ typedef enum ovrHapticsBufferSubmitMode_ {
   ovrHapticsBufferSubmit_Enqueue
 } ovrHapticsBufferSubmitMode;
 
+/// Maximum number of samples in ovrHapticsBuffer
+#define OVR_HAPTICS_BUFFER_SAMPLES_MAX 256
+
 /// Haptics buffer descriptor, contains amplitude samples used for Touch vibration
 typedef struct ovrHapticsBuffer_ {
   /// Samples stored in opaque format
   const void* Samples;
-  /// Number of samples
+  /// Number of samples (up to OVR_HAPTICS_BUFFER_SAMPLES_MAX)
   int SamplesCount;
   /// How samples are submitted to the hardware
   ovrHapticsBufferSubmitMode SubmitMode;
@@ -1155,6 +1171,7 @@ typedef enum ovrInitFlags_ {
   /// This client will alternate between VR and 2D rendering.
   /// Typically set by game engine editors and VR-enabled web browsers.
   ovrInit_MixedRendering = 0x00000020,
+
 
 
 
@@ -1459,14 +1476,26 @@ OVR_PUBLIC_FUNCTION(void) ovr_Destroy(ovrSession session);
 /// \see ovr_GetSessionStatus
 ///
 typedef struct ovrSessionStatus_ {
-  ovrBool IsVisible; ///< True if the process has VR focus and thus is visible in the HMD.
-  ovrBool HmdPresent; ///< True if an HMD is present.
-  ovrBool HmdMounted; ///< True if the HMD is on the user's head.
-  ovrBool DisplayLost; ///< True if the session is in a display-lost state. See ovr_SubmitFrame.
-  ovrBool ShouldQuit; ///< True if the application should initiate shutdown.
-  ovrBool ShouldRecenter; ///< True if UX has requested re-centering. Must call
-  ///< ovr_ClearShouldRecenterFlag, ovr_RecenterTrackingOrigin or
-  ///< ovr_SpecifyTrackingOrigin
+  /// True if the process has VR focus and thus is visible in the HMD.
+  ovrBool IsVisible;
+
+  /// True if an HMD is present.
+  ovrBool HmdPresent;
+
+  /// True if the HMD is on the user's head.
+  ovrBool HmdMounted;
+
+  /// True if the session is in a display-lost state. See ovr_SubmitFrame.
+  ovrBool DisplayLost;
+
+  /// True if the application should initiate shutdown.
+  ovrBool ShouldQuit;
+
+  /// True if UX has requested re-centering. Must call ovr_ClearShouldRecenterFlag,
+  /// ovr_RecenterTrackingOrigin or ovr_SpecifyTrackingOrigin.
+  ovrBool ShouldRecenter;
+
+  ovrBool Internal[2];
 } ovrSessionStatus;
 
 #if !defined(OVR_EXPORTING_CAPI)
@@ -1478,10 +1507,10 @@ typedef struct ovrSessionStatus_ {
 ///
 /// \return Returns an ovrResult indicating success or failure. In the case of
 ///         failure, use ovr_GetLastErrorInfo to get more information.
-//          Return values include but aren't limited to:
+///         Return values include but aren't limited to:
 ///     - ovrSuccess: Completed successfully.
 ///     - ovrError_ServiceConnection: The service connection was lost and the application
-//        must destroy the session.
+///       must destroy the session.
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus);
@@ -2263,6 +2292,7 @@ ovr_GetFovTextureSize(
 OVR_PUBLIC_FUNCTION(ovrEyeRenderDesc)
 ovr_GetRenderDesc(ovrSession session, ovrEyeType eyeType, ovrFovPort fov);
 
+
 /// Submits layers for distortion and display.
 ///
 /// ovr_SubmitFrame triggers distortion and processing which might happen asynchronously.
@@ -2281,10 +2311,8 @@ ovr_GetRenderDesc(ovrSession session, ovrEyeType eyeType, ovrFovPort fov);
 /// \param[in] layerPtrList Specifies a list of ovrLayer pointers, which can include NULL entries to
 ///        indicate that any previously shown layer at that index is to not be displayed.
 ///        Each layer header must be a part of a layer structure such as ovrLayerEyeFov or
-///        ovrLayerQuad,
-///        with Header.Type identifying its type. A NULL layerPtrList entry in the array indicates
-///        the
-///        absence of the given layer.
+///        ovrLayerQuad, with Header.Type identifying its type. A NULL layerPtrList entry in the
+///        array indicates the absence of the given layer.
 ///
 /// \param[in] layerCount Indicates the number of valid elements in layerPtrList. The maximum
 ///        supported layerCount is not currently specified, but may be specified in a future
@@ -2316,24 +2344,16 @@ ovr_GetRenderDesc(ovrSession session, ovrEyeType eyeType, ovrFovPort fov);
 ///     - ovrSuccess: rendering completed successfully.
 ///     - ovrSuccess_NotVisible: rendering completed successfully but was not displayed on the HMD,
 ///       usually because another application currently has ownership of the HMD. Applications
-///       receiving
-///       this result should stop rendering new content, but continue to call ovr_SubmitFrame
-///       periodically
-///       until it returns a value other than ovrSuccess_NotVisible. Applications should not loop on
-///       calls to ovr_SubmitFrame in order to detect visibility; instead ovr_GetSessionStatus
-///       should be used.
-///       Similarly, appliations should not call ovr_SubmitFrame with zero layers to detect
-///       visibility.
+///       receiving this result should stop rendering new content, call ovr_GetSessionStatus
+///       to detect visibility.
 ///     - ovrError_DisplayLost: The session has become invalid (such as due to a device removal)
 ///       and the shared resources need to be released (ovr_DestroyTextureSwapChain), the session
-///       needs to
-///       destroyed (ovr_Destroy) and recreated (ovr_Create), and new resources need to be created
-///       (ovr_CreateTextureSwapChainXXX). The application's existing private graphics resources do
-///       not
-///       need to be recreated unless the new ovr_Create call returns a different GraphicsLuid.
+///       needs to destroyed (ovr_Destroy) and recreated (ovr_Create), and new resources need to be
+///       created (ovr_CreateTextureSwapChainXXX). The application's existing private graphics
+///       resources do not need to be recreated unless the new ovr_Create call returns a different
+///       GraphicsLuid.
 ///     - ovrError_TextureSwapChainInvalid: The ovrTextureSwapChain is in an incomplete or
-///     inconsistent state.
-///       Ensure ovr_CommitTextureSwapChain was called at least once first.
+///       inconsistent state. Ensure ovr_CommitTextureSwapChain was called at least once first.
 ///
 /// \see ovr_GetPredictedDisplayTime, ovrViewScaleDesc, ovrLayerHeader, ovr_GetSessionStatus
 ///
@@ -2668,18 +2688,19 @@ typedef enum ovrDebugHudStereoMode_ {
 #if !defined(OVR_EXPORTING_CAPI)
 
 // -----------------------------------------------------------------------------------
-/// @name Mixed reality support
+/// @name Mixed reality capture support
 ///
-/// Defines functions used for mixed reality / third person cameras.
+/// Defines functions used for mixed reality capture / third person cameras.
 ///
 //@{
 
 /// Returns the number of camera properties of all cameras
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in out] supply the array capacity, will return the actual # of cameras defined
-/// \param[in out] cameras the array.  If null or *inoutCameraCount is too small, will return
-///                ovrError_InsufficientArraySize
-/// \return Returns the ids of external cameras the system knows about. Returns
+/// \param[in out] cameras Pointer to the array. If null and the provided array capacity is
+/// sufficient, will return ovrError_NullArrayPointer. \param[in out] inoutCameraCount Supply the
+/// array capacity, will return the actual # of cameras defined. If *inoutCameraCount is too small,
+/// will return ovrError_InsufficientArraySize. \return Returns the ids of external cameras the
+/// system knows about. Returns
 ///            ovrError_NoExternalCameraInfo if there is not any eternal camera information.
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetExternalCameras(

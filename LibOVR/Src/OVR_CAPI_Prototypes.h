@@ -44,8 +44,13 @@ _(ovrTrackerPose, ovr_GetTrackerPose, , (ovrSession session, unsigned int index)
 _(ovrResult, ovr_GetInputState, , (ovrSession session, ovrControllerType controllerType, ovrInputState*)) \
 _(unsigned int, ovr_GetConnectedControllerTypes, , (ovrSession session)) \
 _(ovrSizei, ovr_GetFovTextureSize, , (ovrSession session, ovrEyeType eye, ovrFovPort fov, float pixelsPerDisplayPixel)) \
-_(ovrResult, ovr_SubmitFrame, , (ovrSession session, long long frameIndex, const ovrViewScaleDesc* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \
-_(ovrEyeRenderDesc, ovr_GetRenderDesc, , (ovrSession session, ovrEyeType eyeType, ovrFovPort fov)) \
+_(ovrResult, ovr_WaitToBeginFrame, , (ovrSession session, long long frameIndex)) \
+_(ovrResult, ovr_BeginFrame, , (ovrSession session, long long frameIndex)) \
+_(ovrResult, ovr_EndFrame, , (ovrSession session, long long frameIndex, const ovrViewScaleDesc* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \
+X(ovrResult, ovr_SubmitFrame, , (ovrSession session, long long frameIndex, const ovrViewScaleDescPre117* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \
+_(ovrResult, ovr_SubmitFrame, 2, (ovrSession session, long long frameIndex, const ovrViewScaleDesc* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \
+X(ovrEyeRenderDescPre117, ovr_GetRenderDesc, , (ovrSession session, ovrEyeType eyeType, ovrFovPort fov)) \
+_(ovrEyeRenderDesc, ovr_GetRenderDesc, 2, (ovrSession session, ovrEyeType eyeType, ovrFovPort fov)) \
 _(double, ovr_GetPredictedDisplayTime, , (ovrSession session, long long frameIndex)) \
 _(double, ovr_GetTimeInSeconds, , (void)) \
 _(ovrBool, ovr_GetBool, , (ovrSession session, const char* propertyName, ovrBool defaultVal)) \
@@ -65,6 +70,8 @@ _(ovrResult, ovr_CreateMirrorTextureGL, , (ovrSession session, const ovrMirrorTe
 _(ovrResult, ovr_CreateMirrorTextureWithOptionsGL, , (ovrSession session, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
 _(ovrResult, ovr_GetTextureSwapChainBufferGL, , (ovrSession session, ovrTextureSwapChain chain, int index, unsigned int* texId)) \
 _(ovrResult, ovr_GetMirrorTextureBufferGL, , (ovrSession session, ovrMirrorTexture mirror, unsigned int* texId)) \
+_(ovrResult, ovr_GetInstanceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
+_(ovrResult, ovr_GetDeviceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
 _(ovrResult, ovr_GetSessionPhysicalDeviceVk, , (ovrSession session, ovrGraphicsLuid luid, VkInstance instance, VkPhysicalDevice* out_physicalDevice)) \
 _(ovrResult, ovr_SetSynchonizationQueueVk, , (ovrSession session, VkQueue queue)) \
 _(ovrResult, ovr_CreateTextureSwapChainVk, , (ovrSession session, VkDevice device, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* out_TextureSwapChain)) \
