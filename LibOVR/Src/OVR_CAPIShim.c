@@ -1331,8 +1331,8 @@ ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
       sessionStatus->ShouldQuit = ovrFalse;
       sessionStatus->DisplayLost = ovrFalse;
       sessionStatus->ShouldRecenter = ovrFalse;
-      sessionStatus->Internal[0] = ovrFalse;
-      sessionStatus->Internal[1] = ovrFalse;
+      sessionStatus->HasInputFocus = ovrFalse;
+      sessionStatus->OverlayPresent = ovrFalse;
     }
 
     return ovrError_NotInitialized;
@@ -1341,6 +1341,20 @@ ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
   return API.ovr_GetSessionStatus.Ptr(session, sessionStatus);
 }
 
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_IsExtensionSupported(ovrSession session, ovrExtensions extension, ovrBool* extensionSupported) {
+  if (!API.ovr_IsExtensionSupported.Ptr)
+    return ovrError_NotInitialized;
+  return API.ovr_IsExtensionSupported.Ptr(session, extension, extensionSupported);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_EnableExtension(ovrSession session, ovrExtensions extension) {
+  if (!API.ovr_EnableExtension.Ptr)
+    return ovrError_NotInitialized;
+  return API.ovr_EnableExtension.Ptr(session, extension);
+}
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_SetTrackingOriginType(ovrSession session, ovrTrackingOrigin origin) {

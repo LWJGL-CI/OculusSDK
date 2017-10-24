@@ -34,6 +34,8 @@ _(ovrTrackerDesc, ovr_GetTrackerDesc, , (ovrSession session, unsigned int tracke
 _(ovrResult, ovr_Create, , (ovrSession* pSession, ovrGraphicsLuid* pLuid)) \
 _(void, ovr_Destroy, , (ovrSession session)) \
 _(ovrResult, ovr_GetSessionStatus, , (ovrSession session, ovrSessionStatus* sessionStatus)) \
+_(ovrResult, ovr_IsExtensionSupported, , (ovrSession session, ovrExtensions extension, ovrBool* outExtensionSupported)) \
+_(ovrResult, ovr_EnableExtension, , (ovrSession session, ovrExtensions extension)) \
 _(ovrResult, ovr_SetTrackingOriginType, , (ovrSession session, ovrTrackingOrigin origin)) \
 _(ovrTrackingOrigin, ovr_GetTrackingOriginType, , (ovrSession session)) \
 _(ovrResult, ovr_RecenterTrackingOrigin, , (ovrSession session)) \

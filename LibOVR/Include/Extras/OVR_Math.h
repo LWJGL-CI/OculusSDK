@@ -1457,7 +1457,7 @@ class Quat {
   // the axis of rotation is the vector normalized,
   // the angle of rotation is the magnitude of the vector.
   Vector3<T> ToRotationVector() const {
-    OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
+    // OVR_MATH_ASSERT(IsNormalized()); // If this fires, caller has a quat math bug
     T s = T(0);
     T sinHalfAngle = sqrt(x * x + y * y + z * z);
     if (sinHalfAngle > T(0)) {
