@@ -216,7 +216,9 @@ template <class C>
 struct CompatibleTypes {
   // Declaration here seems necessary for MSVC; specializations are
   // used instead.
-  typedef struct { } Type; };
+  typedef struct {
+  } Type;
+};
 
 // Specializations providing CompatibleTypes::Type value.
 template <>

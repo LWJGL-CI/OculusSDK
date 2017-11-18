@@ -269,13 +269,19 @@ typedef char ovrBool; ///< Boolean type
 // ***** Simple Math Structures
 
 /// A RGBA color with normalized float components.
-typedef struct OVR_ALIGNAS(4) ovrColorf_ { float r, g, b, a; } ovrColorf;
+typedef struct OVR_ALIGNAS(4) ovrColorf_ {
+  float r, g, b, a;
+} ovrColorf;
 
 /// A 2D vector with integer components.
-typedef struct OVR_ALIGNAS(4) ovrVector2i_ { int x, y; } ovrVector2i;
+typedef struct OVR_ALIGNAS(4) ovrVector2i_ {
+  int x, y;
+} ovrVector2i;
 
 /// A 2D size with integer components.
-typedef struct OVR_ALIGNAS(4) ovrSizei_ { int w, h; } ovrSizei;
+typedef struct OVR_ALIGNAS(4) ovrSizei_ {
+  int w, h;
+} ovrSizei;
 
 /// A 2D rectangle with a position and size.
 /// All components are integers.
@@ -285,16 +291,24 @@ typedef struct OVR_ALIGNAS(4) ovrRecti_ {
 } ovrRecti;
 
 /// A quaternion rotation.
-typedef struct OVR_ALIGNAS(4) ovrQuatf_ { float x, y, z, w; } ovrQuatf;
+typedef struct OVR_ALIGNAS(4) ovrQuatf_ {
+  float x, y, z, w;
+} ovrQuatf;
 
 /// A 2D vector with float components.
-typedef struct OVR_ALIGNAS(4) ovrVector2f_ { float x, y; } ovrVector2f;
+typedef struct OVR_ALIGNAS(4) ovrVector2f_ {
+  float x, y;
+} ovrVector2f;
 
 /// A 3D vector with float components.
-typedef struct OVR_ALIGNAS(4) ovrVector3f_ { float x, y, z; } ovrVector3f;
+typedef struct OVR_ALIGNAS(4) ovrVector3f_ {
+  float x, y, z;
+} ovrVector3f;
 
 /// A 4x4 matrix with float elements.
-typedef struct OVR_ALIGNAS(4) ovrMatrix4f_ { float M[4][4]; } ovrMatrix4f;
+typedef struct OVR_ALIGNAS(4) ovrMatrix4f_ {
+  float M[4][4];
+} ovrMatrix4f;
 
 /// Position and orientation together.
 /// The coordinate system used is right-handed Cartesian.
@@ -686,6 +700,7 @@ typedef enum ovrTextureFormat_ {
   OVR_FORMAT_BC7_UNORM = 23,
   OVR_FORMAT_BC7_UNORM_SRGB = 24,
 
+
   OVR_FORMAT_ENUMSIZE = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureFormat;
 
@@ -738,12 +753,44 @@ typedef struct ovrTextureSwapChainDesc_ {
   unsigned int BindFlags; ///< ovrTextureBindFlags. Not used for GL.
 } ovrTextureSwapChainDesc;
 
+/// Bit flags used as part of ovrMirrorTextureDesc's MirrorOptions field.
+///
+/// \see ovr_CreateMirrorTextureWithOptionsDX
+/// \see ovr_CreateMirrorTextureWithOptionsGL
+/// \see ovr_CreateMirrorTextureWithOptionsVk
+///
+typedef enum ovrMirrorOptions_ {
+  /// By default the mirror texture will be:
+  /// * Pre-distortion (i.e. rectilinear)
+  /// * Contain both eye textures
+  /// * Exclude Guardian, Notifications, System Menu GUI
+  ovrMirrorOption_Default = 0x0000,
+
+  /// Retrieves the barrel distorted texture contents instead of the rectilinear one
+  /// This is only recommended for debugging purposes, and not for final desktop presentation
+  ovrMirrorOption_PostDistortion = 0x0001,
+
+  /// Since ovrMirrorOption_Default renders both eyes into the mirror texture,
+  /// these two flags are exclusive (i.e. cannot use them simultaneously)
+  ovrMirrorOption_LeftEyeOnly = 0x0002,
+  ovrMirrorOption_RightEyeOnly = 0x0004,
+
+  /// Shows the boundary system aka Guardian on the mirror texture
+  ovrMirrorOption_IncludeGuardian = 0x0008,
+
+  /// Shows system notifications the user receives on the mirror texture
+  ovrMirrorOption_IncludeNotifications = 0x0010,
+
+  /// Shows the system menu (triggered by hitting the Home button) on the mirror texture
+  ovrMirrorOption_IncludeSystemGui = 0x0020,
+
+
+  ovrMirrorOption_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+} ovrMirrorOptions;
 
 /// Description used to create a mirror texture.
 ///
-/// \see ovr_CreateMirrorTextureDX
 /// \see ovr_CreateMirrorTextureWithOptionsDX
-/// \see ovr_CreateMirrorTextureGL
 /// \see ovr_CreateMirrorTextureWithOptionsGL
 /// \see ovr_CreateMirrorTextureWithOptionsVk
 ///
@@ -2001,6 +2048,8 @@ typedef enum ovrLayerType_ {
   /// Described by ovrLayerEyeFov.
   ovrLayerType_EyeFov = 1,
 
+  /// Described by ovrLayerEyeFovDepth.
+  ovrLayerType_EyeFovDepth = 2,
 
   /// Described by ovrLayerQuad. Previously called ovrLayerType_QuadInWorld.
   ovrLayerType_Quad = 3,
@@ -2014,6 +2063,9 @@ typedef enum ovrLayerType_ {
 
   /// Described by ovrLayerEyeFovMultires.
   ovrLayerType_EyeFovMultires = 7,
+
+  /// Described by ovrLayerCylinder.
+  ovrLayerType_Cylinder = 8,
 
   /// Described by ovrLayerCube
   ovrLayerType_Cube = 10,
@@ -2044,7 +2096,8 @@ typedef enum ovrLayerFlags_ {
   /// relative to sensor/torso space and remaining still while the head moves.
   /// What used to be ovrLayerType_QuadHeadLocked is now ovrLayerType_Quad plus this flag.
   /// However the flag can be applied to any layer type to achieve a similar effect.
-  ovrLayerFlag_HeadLocked = 0x04
+  ovrLayerFlag_HeadLocked = 0x04,
+
 
 } ovrLayerFlags;
 
@@ -2103,6 +2156,59 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFov_ {
 
 } ovrLayerEyeFov;
 
+/// Describes a layer that specifies a monoscopic or stereoscopic view,
+/// with depth textures in addition to color textures. This is typically used to support
+/// positional time warp. This struct is the same as ovrLayerEyeFov, but with the addition
+/// of DepthTexture and ProjectionDesc.
+///
+/// ProjectionDesc can be created using ovrTimewarpProjectionDesc_FromProjection.
+///
+/// Three options exist with respect to mono/stereo texture usage:
+///    - ColorTexture[0] and ColorTexture[1] contain the left and right stereo renderings,
+///      respectively.
+///      Viewport[0] and Viewport[1] refer to ColorTexture[0] and ColorTexture[1], respectively.
+///    - ColorTexture[0] contains both the left and right renderings, ColorTexture[1] is NULL,
+///      and Viewport[0] and Viewport[1] refer to sub-rects with ColorTexture[0].
+///    - ColorTexture[0] contains a single monoscopic rendering, and Viewport[0] and
+///      Viewport[1] both refer to that rendering.
+///
+/// \see ovrTextureSwapChain, ovr_SubmitFrame
+///
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFovDepth_ {
+  /// Header.Type must be ovrLayerType_EyeFovDepth.
+  ovrLayerHeader Header;
+
+  /// ovrTextureSwapChains for the left and right eye respectively.
+  /// The second one of which can be NULL for cases described above.
+  ovrTextureSwapChain ColorTexture[ovrEye_Count];
+
+  /// Specifies the ColorTexture sub-rect UV coordinates.
+  /// Both Viewport[0] and Viewport[1] must be valid.
+  ovrRecti Viewport[ovrEye_Count];
+
+  /// The viewport field of view.
+  ovrFovPort Fov[ovrEye_Count];
+
+  /// Specifies the position and orientation of each eye view, with position specified in meters.
+  /// RenderPose will typically be the value returned from ovr_CalcEyePoses,
+  /// but can be different in special cases if a different head pose is used for rendering.
+  ovrPosef RenderPose[ovrEye_Count];
+
+  /// Specifies the timestamp when the source ovrPosef (used in calculating RenderPose)
+  /// was sampled from the SDK. Typically retrieved by calling ovr_GetTimeInSeconds
+  /// around the instant the application calls ovr_GetTrackingState
+  /// The main purpose for this is to accurately track app tracking latency.
+  double SensorSampleTime;
+
+  /// Depth texture for positional timewarp.
+  /// Must map 1:1 to the ColorTexture.
+  ovrTextureSwapChain DepthTexture[ovrEye_Count];
+
+  /// Specifies how to convert DepthTexture information into meters.
+  /// \see ovrTimewarpProjectionDesc_FromProjection
+  ovrTimewarpProjectionDesc ProjectionDesc;
+
+} ovrLayerEyeFovDepth;
 
 /// Describes eye texture layouts. Used with ovrLayerEyeFovMultires.
 ///
@@ -2312,6 +2418,72 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerQuad_ {
 
 } ovrLayerQuad;
 
+/// Describes a layer of type ovrLayerType_Cylinder which is a single cylinder
+/// relative to the recentered origin. This type of layer represents a single
+/// object placed in the world and not a stereo view of the world itself.
+///
+///                -Z                                       +Y
+///         U=0  +--+--+  U=1
+///          +---+  |  +---+            +-----------------+  - V=0
+///       +--+ \    |    / +--+         |                 |  |
+///     +-+     \       /     +-+       |                 |  |
+///    ++        \  A  /        ++      |                 |  |
+///   ++          \---/          ++     |                 |  |
+///   |            \ /            |     |              +X |  |
+///   +-------------C------R------+ +X  +--------C--------+  | <--- Height
+///       (+Y is out of screen)         |                 |  |
+///                                     |                 |  |
+///   R = Radius                        |                 |  |
+///   A = Angle (0,2*Pi)                |                 |  |
+///   C = CylinderPoseCenter            |                 |  |
+///   U/V = UV Coordinates              +-----------------+  - V=1
+///
+/// An identity CylinderPoseCenter places the center of the cylinder
+/// at the recentered origin unless the headlocked flag is set.
+///
+/// Does not utilize HmdSpaceToWorldScaleInMeters. If necessary, adjust
+/// translation and radius.
+///
+/// \note Only the interior surface of the cylinder is visible. Use cylinder
+/// layers when the user cannot leave the extents of the cylinder. Artifacts may
+/// appear when viewing the cylinder's exterior surface. Additionally, while the
+/// interface supports an Angle that ranges from [0,2*Pi] the angle should
+/// remain less than 1.9*PI to avoid artifacts where the cylinder edges
+/// converge.
+///
+/// \see ovrTextureSwapChain, ovr_SubmitFrame
+///
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerCylinder_ {
+  /// Header.Type must be ovrLayerType_Cylinder.
+  ovrLayerHeader Header;
+
+  /// Contains a single image, never with any stereo view.
+  ovrTextureSwapChain ColorTexture;
+
+  /// Specifies the ColorTexture sub-rect UV coordinates.
+  ovrRecti Viewport;
+
+  /// Specifies the orientation and position of the center point of a cylinder layer type.
+  /// The position is in real-world meters not the application's virtual world,
+  /// but the physical world the user is in. It is relative to the "zero" position
+  /// set by ovr_RecenterTrackingOrigin unless the ovrLayerFlag_HeadLocked flag is used.
+  ovrPosef CylinderPoseCenter;
+
+  /// Radius of the cylinder in meters.
+  float CylinderRadius;
+
+  /// Angle in radians. Range is from 0 to 2*Pi exclusive covering the entire
+  /// cylinder (see diagram and note above).
+  float CylinderAngle;
+
+  /// Custom aspect ratio presumably set based on 'Viewport'. Used to
+  /// calculate the height of the cylinder based on the arc-length (CylinderAngle)
+  /// and radius (CylinderRadius) given above. The height of the cylinder is
+  /// given by: height = (CylinderRadius * CylinderAngle) / CylinderAspectRatio.
+  /// Aspect ratio is width / height.
+  float CylinderAspectRatio;
+
+} ovrLayerCylinder;
 
 /// Describes a layer of type ovrLayerType_Cube which is a single timewarped
 /// cubemap at infinity. When looking down the recentered origin's -Z axis, +X
@@ -2341,8 +2513,10 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerCube_ {
 typedef union ovrLayer_Union_ {
   ovrLayerHeader Header;
   ovrLayerEyeFov EyeFov;
+  ovrLayerEyeFovDepth EyeFovDepth;
   ovrLayerQuad Quad;
   ovrLayerEyeFovMultires Multires;
+  ovrLayerCylinder Cylinder;
   ovrLayerCube Cube;
 } ovrLayer_Union;
 
@@ -2441,7 +2615,7 @@ OVR_PUBLIC_FUNCTION(void)
 ovr_DestroyTextureSwapChain(ovrSession session, ovrTextureSwapChain chain);
 
 /// MirrorTexture creation is rendering API-specific.
-/// ovr_CreateMirrorTextureDX and ovr_CreateMirrorTextureGL can be found in the
+/// ovr_CreateMirrorTextureWithOptionsDX and ovr_CreateMirrorTextureWithOptionsGL can be found in
 /// rendering API-specific headers, such as OVR_CAPI_D3D.h and OVR_CAPI_GL.h
 
 /// Destroys a mirror texture previously created by one of the mirror texture creation functions.
@@ -2450,7 +2624,7 @@ ovr_DestroyTextureSwapChain(ovrSession session, ovrTextureSwapChain chain);
 /// \param[in] mirrorTexture Specifies the ovrTexture to destroy. If it is NULL then
 ///            this function has no effect.
 ///
-/// \see ovr_CreateMirrorTextureDX, ovr_CreateMirrorTextureGL
+/// \see ovr_CreateMirrorTextureWithOptionsDX, ovr_CreateMirrorTextureWithOptionsGL
 ///
 OVR_PUBLIC_FUNCTION(void)
 ovr_DestroyMirrorTexture(ovrSession session, ovrMirrorTexture mirrorTexture);

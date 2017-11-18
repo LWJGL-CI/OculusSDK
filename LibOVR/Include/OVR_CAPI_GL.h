@@ -73,7 +73,7 @@ ovr_GetTextureSwapChainBufferGL(
 /// Creates a Mirror Texture which is auto-refreshed to mirror Rift contents produced by this
 /// application.
 ///
-/// A second call to ovr_CreateMirrorTextureGL for a given ovrSession before destroying
+/// A second call to ovr_CreateMirrorTextureWithOptionsGL for a given ovrSession before destroying
 /// the first one is not supported and will result in an error return.
 ///
 /// \param[in]  session Specifies an ovrSession previously returned by ovr_Create.
@@ -98,6 +98,19 @@ ovr_GetTextureSwapChainBufferGL(
 /// \see ovr_DestroyMirrorTexture
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_CreateMirrorTextureWithOptionsGL(
+    ovrSession session,
+    const ovrMirrorTextureDesc* desc,
+    ovrMirrorTexture* out_MirrorTexture);
+
+/// Deprecated. Use ovr_CreateMirrorTextureWithOptionsGL instead
+///
+/// Same as ovr_CreateMirrorTextureWithOptionsGL except doesn't use ovrMirrorOptions flags as part
+/// of ovrMirrorTextureDesc's MirrorOptions field, and defaults to ovrMirrorOption_PostDistortion
+///
+/// \see ovrMirrorOptions, ovr_CreateMirrorTextureWithOptionsGL
+///
+OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_CreateMirrorTextureGL(
     ovrSession session,
     const ovrMirrorTextureDesc* desc,
@@ -107,7 +120,7 @@ ovr_CreateMirrorTextureGL(
 ///
 /// \param[in]  session Specifies an ovrSession previously returned by ovr_Create.
 /// \param[in]  mirrorTexture Specifies an ovrMirrorTexture previously returned
-//              by ovr_CreateMirrorTextureGL
+//              by ovr_CreateMirrorTextureWithOptionsGL
 /// \param[out] out_TexId Specifies the GL texture object name associated with the mirror texture
 ///
 /// \return Returns an ovrResult indicating success or failure. In the case of failure, use

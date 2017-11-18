@@ -27,6 +27,10 @@ limitations under the License.
 #include <limits.h>
 #include <memory>
 
+#if !defined(_WIN32)
+#include <assert.h>
+#endif
+
 #if defined(_MSC_VER) && _MSC_VER < 1800 // MSVC < 2013
 #define round(dbl)                  \
   (dbl) >= 0.0 ? (int)((dbl) + 0.5) \
@@ -226,7 +230,7 @@ OVR_PUBLIC_FUNCTION(ovrDetectResult) ovr_Detect(int timeoutMilliseconds) {
   result.IsOculusHMDConnected = ovrFalse;
   result.IsOculusServiceRunning = ovrFalse;
 
-#if defined(_WIN32)
+#if !defined(OSX_UNIMPLEMENTED)
   // Attempt to open the named event.
   HANDLE hServiceEvent = ::OpenEventW(SYNCHRONIZE, FALSE, OVR_HMD_CONNECTED_EVENT_NAME);
 
@@ -248,7 +252,8 @@ OVR_PUBLIC_FUNCTION(ovrDetectResult) ovr_Detect(int timeoutMilliseconds) {
   }
 #else
   (void)timeoutMilliseconds;
-#endif // _WIN32
+  fprintf(stderr, __FILE__ "::[%s] Not implemented.\n", __func__);
+#endif // OSX_UNIMPLEMENTED
 
 
   return result;

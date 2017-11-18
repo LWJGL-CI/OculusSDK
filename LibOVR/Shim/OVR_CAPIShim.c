@@ -888,7 +888,7 @@ static ModuleHandleType OVR_FindLibraryPath(
     const FilePathCharType* directoryArray[2];
     directoryArray[0] = developerDir; // Developer directory.
     directoryArray[1] = L""; // No directory, which causes Windows to use the standard search
-// strategy to find the DLL.
+    // strategy to find the DLL.
 
 #elif defined(__APPLE__)
     // https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man1/dyld.1.html
@@ -1023,12 +1023,8 @@ static ModuleHandleType OVR_FindLibraryPath(
       // application
       // bundle itself. A problem with that is that it doesn't support vendor-supplied updates to
       // the framework.
-      printfResult = snprintf(
-          libraryPath,
-          libraryPathCapacity,
-          "%sLibOVRRT.framework/Versions/%d/LibOVRRT",
-          directoryArray[i],
-          requestedMajorVersion);
+      printfResult =
+          snprintf(libraryPath, libraryPathCapacity, "%sLibOVRRT.dylib", directoryArray[i]);
 
 #else // Unix
       // Applications that depend on the OS (e.g. ld-linux / ldd) can rely on the library being in a
@@ -1130,6 +1126,7 @@ static ovrResult OVR_LoadSharedLibrary(int requestedProductVersion, int requeste
   SymbolName = #FunctionName #OptionalVersion;                                 \
   API.FunctionName.Symbol = OVR_DLSYM(hLibOVR, SymbolName);                    \
   if (!API.FunctionName.Symbol) {                                              \
+    fprintf(stderr, "Unable to locate symbol: %s\n", SymbolName);              \
     result = ovrError_LibSymbols;                                              \
     goto FailedToLoadSymbol;                                                   \
   }
@@ -1751,6 +1748,7 @@ ovr_GetMirrorTextureBufferGL(ovrSession session, ovrMirrorTexture mirror, unsign
   return API.ovr_GetMirrorTextureBufferGL.Ptr(session, mirror, texId);
 }
 
+#if !defined(OSX_UNIMPLEMENTED)
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetInstanceExtensionsVk(
     ovrGraphicsLuid luid,
@@ -1838,6 +1836,7 @@ ovr_GetMirrorTextureBufferVk(
 
   return API.ovr_GetMirrorTextureBufferVk.Ptr(session, mirrorTexture, out_Image);
 }
+#endif // OSX_UNIMPLEMENTED
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainLength(ovrSession session, ovrTextureSwapChain chain, int* length) {
