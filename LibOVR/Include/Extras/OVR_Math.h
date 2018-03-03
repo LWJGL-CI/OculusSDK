@@ -352,6 +352,9 @@ class Math {
 #define MATH_DOUBLE_SINGULARITYRADIUS \
   1e-12 // about 1-cos(.0001 degree), for gimbal lock numerical problems
 
+#define MATH_DOUBLE_HUGENUMBER 1.3407807929942596e+154
+#define MATH_DOUBLE_SMALLESTNONDENORMAL 2.2250738585072014e-308
+
 //------------------------------------------------------------------------------------//
 // ***** float constants
 #define MATH_FLOAT_PI float(MATH_DOUBLE_PI)
@@ -376,6 +379,9 @@ class Math {
 #define MATH_FLOAT_SINGULARITYRADIUS \
   1e-7f // about 1-cos(.025 degree), for gimbal lock numerical problems
 
+#define MATH_FLOAT_HUGENUMBER 1.8446742974197924e+019f
+#define MATH_FLOAT_SMALLESTNONDENORMAL 1.1754943508222875e-038f
+
 // Single-precision Math constants class.
 template <>
 class Math<float> {
@@ -391,6 +397,12 @@ class Math<float> {
   static inline float SingularityRadius() {
     return MATH_FLOAT_SINGULARITYRADIUS;
   }; // for gimbal lock numerical problems
+  static inline float HugeNumber() {
+    return MATH_FLOAT_HUGENUMBER;
+  }
+  static inline float SmallestNonDenormal() {
+    return MATH_FLOAT_SMALLESTNONDENORMAL;
+  }
 };
 
 // Double-precision Math constants class
@@ -405,6 +417,12 @@ class Math<double> {
   static inline double SingularityRadius() {
     return MATH_DOUBLE_SINGULARITYRADIUS;
   }; // for gimbal lock numerical problems
+  static inline double HugeNumber() {
+    return MATH_DOUBLE_HUGENUMBER;
+  }
+  static inline double SmallestNonDenormal() {
+    return MATH_DOUBLE_SMALLESTNONDENORMAL;
+  }
 };
 
 typedef Math<float> Mathf;
@@ -431,6 +449,15 @@ template <class T>
 inline T Sqr(T x) {
   return x * x;
 }
+
+// MERGE_MOBILE_SDK
+// Safe reciprocal square root.
+template <class T>
+T RcpSqrt(const T f) {
+  return (f >= Math<T>::SmallestNonDenormal()) ? static_cast<T>(1.0 / sqrt(f))
+                                               : Math<T>::HugeNumber();
+}
+// MERGE_MOBILE_SDK
 
 // Sign: returns 0 if x == 0, -1 if x < 0, and 1 if x > 0
 template <class T>
@@ -1609,6 +1636,42 @@ class Quat {
     OVR_MATH_ASSERT(IsNormalized()); // Ensure input matrix is orthogonal
   }
 
+  // MERGE_MOBILE_SDK
+  // Constructs a quaternion that rotates 'from' to line up with 'to'.
+  explicit Quat(const Vector3<T>& from, const Vector3<T>& to) {
+    const T cx = from.y * to.z - from.z * to.y;
+    const T cy = from.z * to.x - from.x * to.z;
+    const T cz = from.x * to.y - from.y * to.x;
+    const T dot = from.x * to.x + from.y * to.y + from.z * to.z;
+    const T crossLengthSq = cx * cx + cy * cy + cz * cz;
+    const T magnitude = static_cast<T>(sqrt(crossLengthSq + dot * dot));
+    const T cw = dot + magnitude;
+    if (cw < Math<T>::SmallestNonDenormal()) {
+      const T sx = to.y * to.y + to.z * to.z;
+      const T sz = to.x * to.x + to.y * to.y;
+      if (sx > sz) {
+        const T rcpLength = RcpSqrt(sx);
+        x = T(0);
+        y = to.z * rcpLength;
+        z = -to.y * rcpLength;
+        w = T(0);
+      } else {
+        const T rcpLength = RcpSqrt(sz);
+        x = to.y * rcpLength;
+        y = -to.x * rcpLength;
+        z = T(0);
+        w = T(0);
+      }
+      return;
+    }
+    const T rcpLength = RcpSqrt(crossLengthSq + cw * cw);
+    x = cx * rcpLength;
+    y = cy * rcpLength;
+    z = cz * rcpLength;
+    w = cw * rcpLength;
+  }
+  // MERGE_MOBILE_SDK
+
   bool operator==(const Quat& b) const {
     return x == b.x && y == b.y && z == b.z && w == b.w;
   }
@@ -1659,6 +1722,12 @@ class Quat {
     z *= rcp;
     return *this;
   }
+
+  // MERGE_MOBILE_SDK
+  Vector3<T> operator*(const Vector3<T>& v) const {
+    return Rotate(v);
+  }
+  // MERGE_MOBILE_SDK
 
   // Compare two quats for equality within tolerance. Returns true if quats match within tolerance.
   bool IsEqual(const Quat& b, T tolerance = Math<T>::Tolerance()) const {
@@ -1845,6 +1914,15 @@ class Quat {
     Vector3<T> delta = (b * this->Inverted()).FastToRotationVector();
     return (FastFromRotationVector(delta * s, false) * *this).Normalized();
   }
+
+  // MERGE_MOBILE_SDK
+  // FIXME: This is opposite of Lerp for some reason.  It goes from 1 to 0 instead of 0 to 1.
+  // Leaving it as a gift for future generations to deal with.
+  Quat Nlerp(const Quat& other, T a) const {
+    T sign = (Dot(other) >= 0.0f) ? 1.0f : -1.0f;
+    return (*this * sign * a + other * (1 - a)).Normalized();
+  }
+  // MERGE_MOBILE_SDK
 
   // Rotate transforms vector in a manner that matches Matrix rotations (counter-clockwise,
   // assuming negative direction of the axis). Standard formula: q(t) * V * q(t)^-1.
@@ -2575,6 +2653,17 @@ class Matrix4 {
       for (int j = 0; j < 4; j++)
         M[i][j] /= s;
     return *this;
+  }
+
+  T operator()(int i, int j) const {
+    return M[i][j];
+  }
+  T& operator()(int i, int j) {
+    return M[i][j];
+  }
+
+  Vector4<T> operator*(const Vector4<T>& b) const {
+    return Transform(b);
   }
 
   Vector3<T> Transform(const Vector3<T>& v) const {

@@ -512,17 +512,16 @@ static ValidateCertificateContentsResult ValidateCertificateContents(
     fptr = u.p1;                                       \
   }
 
-static HANDLE OVR_Win32_SignCheck(FilePathCharType* fullPath) {
-  HANDLE hFile = INVALID_HANDLE_VALUE;
+static BOOL OVR_Win32_SignCheck(FilePathCharType* fullPath, HANDLE hFile) {
   WINTRUST_FILE_INFO fileData;
   WINTRUST_DATA wintrustData;
   GUID actionGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
   LONG resultStatus;
-  int verified = 0;
+  BOOL verified = FALSE;
   HMODULE libWinTrust = LoadLibraryW(L"wintrust");
   HMODULE libCrypt32 = LoadLibraryW(L"crypt32");
   if (libWinTrust == NULL || libCrypt32 == NULL) {
-    return INVALID_HANDLE_VALUE;
+    return FALSE;
   }
 
   OVR_SIGNING_CONVERT_PTR(
@@ -542,18 +541,11 @@ static HANDLE OVR_Win32_SignCheck(FilePathCharType* fullPath) {
 
   if (m_PtrCertGetNameStringW == NULL || m_PtrWinVerifyTrust == NULL ||
       m_PtrWTHelperProvDataFromStateData == NULL || m_PtrWTHelperGetProvSignerFromChain == NULL) {
-    return INVALID_HANDLE_VALUE;
+    return FALSE;
   }
 
-  if (!fullPath) {
-    return INVALID_HANDLE_VALUE;
-  }
-
-  hFile = CreateFileW(
-      fullPath, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, 0);
-
-  if (hFile == INVALID_HANDLE_VALUE) {
-    return INVALID_HANDLE_VALUE;
+  if (hFile == INVALID_HANDLE_VALUE || fullPath == NULL) {
+    return FALSE;
   }
 
   ZeroMemory(&fileData, sizeof(fileData));
@@ -586,7 +578,7 @@ static HANDLE OVR_Win32_SignCheck(FilePathCharType* fullPath) {
       for (chainIndex = 0; chainIndex < CertificateChainCount; ++chainIndex) {
         CertificateEntry* chain = AllowedCertificateChains[chainIndex];
         if (VCCRSuccess == ValidateCertificateContents(chain, cps)) {
-          verified = 1;
+          verified = TRUE;
           break;
         }
       }
@@ -600,12 +592,7 @@ static HANDLE OVR_Win32_SignCheck(FilePathCharType* fullPath) {
       &actionGUID, // V2 verification
       &wintrustData);
 
-  if (verified != 1) {
-    CloseHandle(hFile);
-    return INVALID_HANDLE_VALUE;
-  }
-
-  return hFile;
+  return verified;
 }
 
 #endif // #if defined(_WIN32)
@@ -618,24 +605,33 @@ static ModuleHandleType OVR_OpenLibrary(const FilePathCharType* libraryPath, ovr
   ModuleHandleType hModule = 0;
 
   *result = ovrSuccess;
+
   fullPathNameLen = GetFullPathNameW(libraryPath, MAX_PATH, fullPath, 0);
   if (fullPathNameLen <= 0 || fullPathNameLen >= MAX_PATH) {
     *result = ovrError_LibPath;
     return NULL;
   }
-  fullPath[MAX_PATH - 1] = 0;
 
-  hFilePinned = OVR_Win32_SignCheck(fullPath);
+  hFilePinned = CreateFileW(
+      fullPath, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_READONLY, 0);
 
   if (hFilePinned == INVALID_HANDLE_VALUE) {
+    *result = ovrError_LibPath;
+    return NULL;
+  }
+
+  if (!OVR_Win32_SignCheck(fullPath, hFilePinned)) {
     *result = ovrError_LibSignCheck;
+    CloseHandle(hFilePinned);
     return NULL;
   }
 
   hModule = LoadLibraryW(fullPath);
 
-  if (hFilePinned != INVALID_HANDLE_VALUE) {
-    CloseHandle(hFilePinned);
+  CloseHandle(hFilePinned);
+
+  if (hModule == NULL) {
+    *result = ovrError_LibLoad;
   }
 
   return hModule;
@@ -1330,6 +1326,7 @@ ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
       sessionStatus->ShouldRecenter = ovrFalse;
       sessionStatus->HasInputFocus = ovrFalse;
       sessionStatus->OverlayPresent = ovrFalse;
+      sessionStatus->DepthRequested = ovrFalse;
     }
 
     return ovrError_NotInitialized;
@@ -1783,11 +1780,11 @@ ovr_GetSessionPhysicalDeviceVk(
   return API.ovr_GetSessionPhysicalDeviceVk.Ptr(session, luid, instance, out_physicalDevice);
 }
 
-OVR_PUBLIC_FUNCTION(ovrResult) ovr_SetSynchonizationQueueVk(ovrSession session, VkQueue queue) {
-  if (!API.ovr_SetSynchonizationQueueVk.Ptr)
+OVR_PUBLIC_FUNCTION(ovrResult) ovr_SetSynchronizationQueueVk(ovrSession session, VkQueue queue) {
+  if (!API.ovr_SetSynchronizationQueueVk.Ptr)
     return ovrError_NotInitialized;
 
-  return API.ovr_SetSynchonizationQueueVk.Ptr(session, queue);
+  return API.ovr_SetSynchronizationQueueVk.Ptr(session, queue);
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)
@@ -2093,7 +2090,6 @@ ovr_SetExternalCameraProperties(
 
   return API.ovr_SetExternalCameraProperties.Ptr(session, name, intrinsics, extrinsics);
 }
-
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif

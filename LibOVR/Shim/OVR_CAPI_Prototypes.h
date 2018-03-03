@@ -72,14 +72,6 @@ _(ovrResult, ovr_CreateMirrorTextureGL, , (ovrSession session, const ovrMirrorTe
 _(ovrResult, ovr_CreateMirrorTextureWithOptionsGL, , (ovrSession session, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* outMirrorTexture)) \
 _(ovrResult, ovr_GetTextureSwapChainBufferGL, , (ovrSession session, ovrTextureSwapChain chain, int index, unsigned int* texId)) \
 _(ovrResult, ovr_GetMirrorTextureBufferGL, , (ovrSession session, ovrMirrorTexture mirror, unsigned int* texId)) \
-_(ovrResult, ovr_GetInstanceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
-_(ovrResult, ovr_GetDeviceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
-_(ovrResult, ovr_GetSessionPhysicalDeviceVk, , (ovrSession session, ovrGraphicsLuid luid, VkInstance instance, VkPhysicalDevice* out_physicalDevice)) \
-_(ovrResult, ovr_SetSynchonizationQueueVk, , (ovrSession session, VkQueue queue)) \
-_(ovrResult, ovr_CreateTextureSwapChainVk, , (ovrSession session, VkDevice device, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* out_TextureSwapChain)) \
-_(ovrResult, ovr_GetTextureSwapChainBufferVk, , (ovrSession session, ovrTextureSwapChain chain, int index, VkImage* out_Image)) \
-_(ovrResult, ovr_CreateMirrorTextureWithOptionsVk, , (ovrSession session, VkDevice device, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* out_MirrorTexture)) \
-_(ovrResult, ovr_GetMirrorTextureBufferVk, , (ovrSession session, ovrMirrorTexture mirrorTexture, VkImage* out_Image)) \
 _(ovrResult, ovr_GetTextureSwapChainLength, , (ovrSession session, ovrTextureSwapChain chain, int* length)) \
 _(ovrResult, ovr_GetTextureSwapChainCurrentIndex, , (ovrSession session, ovrTextureSwapChain chain, int* currentIndex)) \
 _(ovrResult, ovr_GetTextureSwapChainDesc, , (ovrSession session, ovrTextureSwapChain chain, ovrTextureSwapChainDesc* desc)) \
@@ -103,7 +95,7 @@ _(ovrResult, ovr_RequestBoundaryVisible, , (ovrSession session, ovrBool visible)
 _(ovrResult, ovr_GetPerfStats, , (ovrSession session, ovrPerfStats* outPerfStats)) \
 _(ovrResult, ovr_ResetPerfStats, , (ovrSession session))\
 _(ovrResult, ovr_GetExternalCameras, , (ovrSession session, ovrExternalCamera* outCameras, unsigned int* outCameraCount))\
-_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))
+_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))\
 
 #if defined (_WIN32)
 #define OVR_LIST_WIN32_APIS(_,X) \
@@ -117,7 +109,16 @@ _(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char*
     _(ovrResult, ovr_GetAudioDeviceOutGuidStr, , (WCHAR* deviceOutStrBuffer)) \
     _(ovrResult, ovr_GetAudioDeviceOutGuid, , (GUID* deviceOutGuid)) \
     _(ovrResult, ovr_GetAudioDeviceInGuidStr, , (WCHAR* deviceInStrBuffer)) \
-    _(ovrResult, ovr_GetAudioDeviceInGuid, , (GUID* deviceInGuid))
+    _(ovrResult, ovr_GetAudioDeviceInGuid, , (GUID* deviceInGuid)) \
+    _(ovrResult, ovr_GetInstanceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
+    _(ovrResult, ovr_GetDeviceExtensionsVk, , (ovrGraphicsLuid luid, char* extensionNames, uint32_t* inoutExtensionNamesSize)) \
+    _(ovrResult, ovr_GetSessionPhysicalDeviceVk, , (ovrSession session, ovrGraphicsLuid luid, VkInstance instance, VkPhysicalDevice* out_physicalDevice)) \
+    X(ovrResult, ovr_SetSynchonizationQueueVk, , (ovrSession session, VkQueue queue)) \
+    _(ovrResult, ovr_SetSynchronizationQueueVk, , (ovrSession session, VkQueue queue)) \
+    _(ovrResult, ovr_CreateTextureSwapChainVk, , (ovrSession session, VkDevice device, const ovrTextureSwapChainDesc* desc, ovrTextureSwapChain* out_TextureSwapChain)) \
+    _(ovrResult, ovr_GetTextureSwapChainBufferVk, , (ovrSession session, ovrTextureSwapChain chain, int index, VkImage* out_Image)) \
+    _(ovrResult, ovr_CreateMirrorTextureWithOptionsVk, , (ovrSession session, VkDevice device, const ovrMirrorTextureDesc* desc, ovrMirrorTexture* out_MirrorTexture)) \
+    _(ovrResult, ovr_GetMirrorTextureBufferVk, , (ovrSession session, ovrMirrorTexture mirrorTexture, VkImage* out_Image))
 #else
 #define OVR_LIST_WIN32_APIS(_,X)
 #endif

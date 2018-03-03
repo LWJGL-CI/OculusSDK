@@ -252,7 +252,9 @@ OVR_PUBLIC_FUNCTION(ovrDetectResult) ovr_Detect(int timeoutMilliseconds) {
   }
 #else
   (void)timeoutMilliseconds;
-  fprintf(stderr, __FILE__ "::[%s] Not implemented.\n", __func__);
+  fprintf(stderr, __FILE__ "::[%s] Not implemented. Assuming single-process.\n", __func__);
+  result.IsOculusServiceRunning = ovrTrue;
+  result.IsOculusHMDConnected = ovrTrue;
 #endif // OSX_UNIMPLEMENTED
 
 

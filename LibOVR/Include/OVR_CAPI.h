@@ -676,6 +676,7 @@ typedef enum ovrTextureFormat_ {
   OVR_FORMAT_R8G8B8A8_UNORM = 4,
   OVR_FORMAT_R8G8B8A8_UNORM_SRGB = 5,
   OVR_FORMAT_B8G8R8A8_UNORM = 6,
+  OVR_FORMAT_B8G8R8_UNORM = 27,
   OVR_FORMAT_B8G8R8A8_UNORM_SRGB = 7, ///< Not supported for OpenGL applications
   OVR_FORMAT_B8G8R8X8_UNORM = 8, ///< Not supported for OpenGL applications
   OVR_FORMAT_B8G8R8X8_UNORM_SRGB = 9, ///< Not supported for OpenGL applications
@@ -747,7 +748,7 @@ typedef struct ovrTextureSwapChainDesc_ {
   int Width;
   int Height;
   int MipLevels;
-  int SampleCount; ///< Only supported with depth textures.
+  int SampleCount;
   ovrBool StaticImage; ///< Not buffered in a chain. For images that don't change
   unsigned int MiscFlags; ///< ovrTextureFlags
   unsigned int BindFlags; ///< ovrTextureBindFlags. Not used for GL.
@@ -1162,6 +1163,10 @@ typedef enum ovrCameraStatusFlags_ {
 
   /// Bit set when the camera has tried & passed calibration
   ovrCameraStatus_Calibrated = 0x8,
+
+  /// Bit set when the camera is capturing
+  ovrCameraStatus_Capturing = 0x10,
+
   ovrCameraStatus_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrCameraStatusFlags;
 
@@ -1194,7 +1199,7 @@ typedef struct ovrCameraExtrinsics_ {
   double AdditionalLatencySeconds;
 
 } ovrCameraExtrinsics;
-
+#define OVR_MAX_EXTERNAL_CAMERA_COUNT 16
 #define OVR_EXTERNAL_CAMERA_NAME_SIZE 32
 typedef struct ovrExternalCamera_ {
   char Name[OVR_EXTERNAL_CAMERA_NAME_SIZE]; // camera identifier: vid + pid + serial number etc.
@@ -1567,6 +1572,10 @@ typedef struct ovrSessionStatus_ {
   /// don't visually fight with the system overlay, and consume fewer CPU and GPU resources.
   ovrBool OverlayPresent;
 
+  /// True if runtime is requesting that the application provide depth buffers with projection
+  /// layers.
+  ovrBool DepthRequested;
+
 } ovrSessionStatus;
 
 #if !defined(OVR_EXPORTING_CAPI)
@@ -1763,7 +1772,8 @@ OVR_PUBLIC_FUNCTION(ovrTrackingState)
 ovr_GetTrackingState(ovrSession session, double absTime, ovrBool latencyMarker);
 
 /// Returns an array of poses, where each pose matches a device type provided by the deviceTypes
-/// array parameter.
+/// array parameter.  If any pose cannot be retrieved, it will return a reason for the missing
+/// pose and the device pose will be zeroed out with a pose quaternion [x=0, y=0, z=0, w=1].
 ///
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
 /// \param[in] deviceTypes Array of device types to query for their poses.
@@ -2021,6 +2031,44 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetBoundaryVisible(ovrSession session, ovrBoo
 ///
 OVR_PUBLIC_FUNCTION(ovrResult) ovr_RequestBoundaryVisible(ovrSession session, ovrBool visible);
 
+// -----------------------------------------------------------------------------------
+/// @name Mixed reality capture support
+///
+/// Defines functions used for mixed reality capture / third person cameras.
+///
+
+/// Returns the number of camera properties of all cameras
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
+/// \param[in out] cameras Pointer to the array. If null and the provided array capacity is
+/// sufficient, will return ovrError_NullArrayPointer.
+/// \param[in out] inoutCameraCount Supply the
+/// array capacity, will return the actual # of cameras defined. If *inoutCameraCount is too small,
+/// will return ovrError_InsufficientArraySize.
+/// \return Returns the list of external cameras the system knows about.
+/// Returns ovrError_NoExternalCameraInfo if there is not any eternal camera information.
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetExternalCameras(
+    ovrSession session,
+    ovrExternalCamera* cameras,
+    unsigned int* inoutCameraCount);
+
+/// Sets the camera intrinsics and/or extrinsics stored for the cameraName camera
+/// Names must be < 32 characters and null-terminated.
+///
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
+/// \param[in] name Specifies which camera to set the intrinsics or extrinsics for.
+/// The name must be at most OVR_EXTERNAL_CAMERA_NAME_SIZE - 1
+/// characters. Otherwise, ovrError_ExternalCameraNameWrongSize is returned.
+/// \param[in] intrinsics Contains the intrinsic parameters to set, can be null
+/// \param[in] extrinsics Contains the extrinsic parameters to set, can be null
+/// \return Returns ovrSuccess or an ovrError code
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_SetExternalCameraProperties(
+    ovrSession session,
+    const char* name,
+    const ovrCameraIntrinsics* const intrinsics,
+    const ovrCameraExtrinsics* const extrinsics);
+
 ///@}
 
 #endif // !defined(OVR_EXPORTING_CAPI)
@@ -2219,6 +2267,9 @@ typedef enum ovrTextureLayout_ {
 } ovrTextureLayout;
 
 /// Multiresolution descriptor for Octilinear.
+///
+/// Usage of this layer must be successfully enabled via ovr_EnableExtension
+/// before it can be used.
 ///
 /// \see ovrLayerEyeFovMultres
 ///
@@ -3183,49 +3234,6 @@ typedef enum ovrDebugHudStereoMode_ {
 
   ovrDebugHudStereo_EnumSize = 0x7fffffff ///< \internal Force type int32_t
 } ovrDebugHudStereoMode;
-
-
-#if !defined(OVR_EXPORTING_CAPI)
-
-// -----------------------------------------------------------------------------------
-/// @name Mixed reality capture support
-///
-/// Defines functions used for mixed reality capture / third person cameras.
-///
-//@{
-
-/// Returns the number of camera properties of all cameras
-/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in out] cameras Pointer to the array. If null and the provided array capacity is
-/// sufficient, will return ovrError_NullArrayPointer. \param[in out] inoutCameraCount Supply the
-/// array capacity, will return the actual # of cameras defined. If *inoutCameraCount is too small,
-/// will return ovrError_InsufficientArraySize. \return Returns the ids of external cameras the
-/// system knows about. Returns
-///            ovrError_NoExternalCameraInfo if there is not any eternal camera information.
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_GetExternalCameras(
-    ovrSession session,
-    ovrExternalCamera* cameras,
-    unsigned int* inoutCameraCount);
-
-/// Sets the camera intrinsics and/or extrinsics stored for the cameraName camera
-/// Names must be < 32 characters and null-terminated.
-///
-/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in] name Specifies which camera to set the intrinsics or extrinsics for
-/// \param[in] intrinsics Contains the intrinsic parameters to set, can be null
-/// \param[in] extrinsics Contains the extrinsic parameters to set, can be null
-/// \return Returns ovrSuccess or an ovrError code
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_SetExternalCameraProperties(
-    ovrSession session,
-    const char* name,
-    const ovrCameraIntrinsics* const intrinsics,
-    const ovrCameraExtrinsics* const extrinsics);
-
-///@}
-
-#endif // OVR_EXPORTING_CAPI
 
 #if !defined(OVR_EXPORTING_CAPI)
 
