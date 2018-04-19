@@ -750,8 +750,8 @@ typedef struct ovrTextureSwapChainDesc_ {
   int MipLevels;
   int SampleCount;
   ovrBool StaticImage; ///< Not buffered in a chain. For images that don't change
-  unsigned int MiscFlags; ///< ovrTextureFlags
-  unsigned int BindFlags; ///< ovrTextureBindFlags. Not used for GL.
+  OVR_ALIGNAS(4) unsigned int MiscFlags; ///< ovrTextureFlags
+  OVR_ALIGNAS(4) unsigned int BindFlags; ///< ovrTextureBindFlags. Not used for GL.
 } ovrTextureSwapChainDesc;
 
 /// Bit flags used as part of ovrMirrorTextureDesc's MirrorOptions field.
@@ -3374,6 +3374,10 @@ ovr_SetString(ovrSession session, const char* propertyName, const char* value);
 
 /// @cond DoxygenIgnore
 
+
+OVR_STATIC_ASSERT(
+    sizeof(ovrTextureSwapChainDesc) == 10 * 4,
+    "ovrTextureSwapChainDesc size mismatch");
 
 // -----------------------------------------------------------------------------------
 // ***** Backward compatibility #includes

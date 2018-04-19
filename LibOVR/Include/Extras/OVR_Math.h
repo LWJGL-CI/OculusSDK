@@ -4311,6 +4311,16 @@ struct FovPort {
 
     return uncantedFov;
   }
+
+  template <class T>
+  static FovPort ScaleFovPort(const FovPort& fov, OVR::Vector2<T> scaleFactors) {
+    FovPort retFov = FovPort(fov);
+    retFov.LeftTan *= ((scaleFactors.x != 0.0) ? scaleFactors.x : 1.0f);
+    retFov.RightTan *= ((scaleFactors.x != 0.0) ? scaleFactors.x : 1.0f);
+    retFov.UpTan *= ((scaleFactors.y != 0.0) ? scaleFactors.y : 1.0f);
+    retFov.DownTan *= ((scaleFactors.y != 0.0) ? scaleFactors.y : 1.0f);
+    return retFov;
+  }
 };
 
 } // Namespace OVR

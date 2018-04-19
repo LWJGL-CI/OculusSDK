@@ -1149,6 +1149,10 @@ static const ovrInitParams DefaultParams = {
     OVR_ON64("") // pad0
 };
 
+// Don't put this on the heap
+static ovrErrorInfo LastInitializeErrorInfo = {ovrError_NotInitialized,
+                                               "ovr_Initialize never called"};
+
 OVR_PUBLIC_FUNCTION(ovrResult) ovr_Initialize(const ovrInitParams* inputParams) {
   ovrResult result;
   ovrInitParams params;
@@ -1215,8 +1219,14 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_Initialize(const ovrInitParams* inputParams) 
 
   result = API.ovr_Initialize.Ptr(&params);
 
-  if (result != ovrSuccess)
+  if (result != ovrSuccess) {
+    // Stash the last initialization error for the shim to return if
+    // ovr_GetLastErrorInfo is called after we unload the dll below
+    if (API.ovr_GetLastErrorInfo.Ptr) {
+      API.ovr_GetLastErrorInfo.Ptr(&LastInitializeErrorInfo);
+    }
     OVR_UnloadSharedLibrary();
+  }
 
   reportClientInfo =
       (ovr_ReportClientInfoType)(uintptr_t)OVR_DLSYM(hLibOVR, "ovr_ReportClientInfo");
@@ -1266,8 +1276,7 @@ OVR_PUBLIC_FUNCTION(const char*) ovr_GetVersionString() {
 
 OVR_PUBLIC_FUNCTION(void) ovr_GetLastErrorInfo(ovrErrorInfo* errorInfo) {
   if (!API.ovr_GetLastErrorInfo.Ptr) {
-    memset(errorInfo, 0, sizeof(ovrErrorInfo));
-    errorInfo->Result = ovrError_NotInitialized;
+    *errorInfo = LastInitializeErrorInfo;
   } else
     API.ovr_GetLastErrorInfo.Ptr(errorInfo);
 }
