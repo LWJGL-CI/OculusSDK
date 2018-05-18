@@ -1811,7 +1811,7 @@ ovr_GetTrackerPose(ovrSession session, unsigned int trackerPoseIndex);
 /// Returns the most recent input state for controllers, without positional tracking info.
 ///
 /// \param[out] inputState Input state that will be filled in.
-/// \param[in] ovrControllerType Specifies which controller the input will be returned for.
+/// \param[in] controllerType Specifies which controller the input will be returned for.
 /// \return Returns ovrSuccess if the new state was successfully obtained.
 ///
 /// \see ovrControllerType
@@ -2039,9 +2039,9 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_RequestBoundaryVisible(ovrSession session, ov
 
 /// Returns the number of camera properties of all cameras
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
-/// \param[in out] cameras Pointer to the array. If null and the provided array capacity is
+/// \param[in, out] cameras Pointer to the array. If null and the provided array capacity is
 /// sufficient, will return ovrError_NullArrayPointer.
-/// \param[in out] inoutCameraCount Supply the
+/// \param[in, out] inoutCameraCount Supply the
 /// array capacity, will return the actual # of cameras defined. If *inoutCameraCount is too small,
 /// will return ovrError_InsufficientArraySize.
 /// \return Returns the list of external cameras the system knows about.
@@ -2159,6 +2159,8 @@ typedef enum ovrLayerFlags_ {
 typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ {
   ovrLayerType Type; ///< Described by ovrLayerType.
   unsigned Flags; ///< Described by ovrLayerFlags.
+
+  char Reserved[128];
 } ovrLayerHeader;
 
 /// Describes a layer that specifies a monoscopic or stereoscopic view.
@@ -2201,7 +2203,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFov_ {
   /// around the instant the application calls ovr_GetTrackingState
   /// The main purpose for this is to accurately track app tracking latency.
   double SensorSampleTime;
-
 } ovrLayerEyeFov;
 
 /// Describes a layer that specifies a monoscopic or stereoscopic view,
@@ -2248,14 +2249,13 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFovDepth_ {
   /// The main purpose for this is to accurately track app tracking latency.
   double SensorSampleTime;
 
-  /// Depth texture for positional timewarp.
+  /// Depth texture for depth composition with overlays
   /// Must map 1:1 to the ColorTexture.
   ovrTextureSwapChain DepthTexture[ovrEye_Count];
 
   /// Specifies how to convert DepthTexture information into meters.
   /// \see ovrTimewarpProjectionDesc_FromProjection
   ovrTimewarpProjectionDesc ProjectionDesc;
-
 } ovrLayerEyeFovDepth;
 
 /// Describes eye texture layouts. Used with ovrLayerEyeFovMultires.
@@ -2381,7 +2381,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFovMultires_ {
 
   /// Specifies texture layout parameters.
   ovrTextureLayoutDesc_Union TextureLayoutDesc;
-
 } ovrLayerEyeFovMultires;
 
 /// Describes a layer that specifies a monoscopic or stereoscopic view.
@@ -2431,7 +2430,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeMatrix_ {
   /// around the instant the application calls ovr_GetTrackingState
   /// The main purpose for this is to accurately track app tracking latency.
   double SensorSampleTime;
-
 } ovrLayerEyeMatrix;
 
 /// Describes a layer of Quad type, which is a single quad in world or viewer space.
@@ -2466,7 +2464,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerQuad_ {
 
   /// Width and height (respectively) of the quad in meters.
   ovrVector2f QuadSize;
-
 } ovrLayerQuad;
 
 /// Describes a layer of type ovrLayerType_Cylinder which is a single cylinder
@@ -2533,7 +2530,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerCylinder_ {
   /// given by: height = (CylinderRadius * CylinderAngle) / CylinderAspectRatio.
   /// Aspect ratio is width / height.
   float CylinderAspectRatio;
-
 } ovrLayerCylinder;
 
 /// Describes a layer of type ovrLayerType_Cube which is a single timewarped
@@ -2566,6 +2562,7 @@ typedef union ovrLayer_Union_ {
   ovrLayerEyeFov EyeFov;
   ovrLayerEyeFovDepth EyeFovDepth;
   ovrLayerQuad Quad;
+  ovrLayerEyeMatrix EyeMatrix;
   ovrLayerEyeFovMultires Multires;
   ovrLayerCylinder Cylinder;
   ovrLayerCube Cube;

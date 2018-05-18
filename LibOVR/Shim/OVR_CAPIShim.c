@@ -833,8 +833,10 @@ static ModuleHandleType OVR_FindLibraryPath(
       const char* pCompilerVersion = "VS2012";
 #elif defined(_MSC_VER) && (_MSC_VER == 1800)
       const char* pCompilerVersion = "VS2013";
-#elif defined(_MSC_VER) && (_MSC_VER >= 1900)
+#elif defined(_MSC_VER) && (_MSC_VER == 1900)
       const char* pCompilerVersion = "VS2015";
+#elif defined(_MSC_VER) && (_MSC_VER > 1900)
+      const char* pCompilerVersion = "VS2017";
 #endif
 
 #if defined(_WIN32)
@@ -1754,7 +1756,7 @@ ovr_GetMirrorTextureBufferGL(ovrSession session, ovrMirrorTexture mirror, unsign
   return API.ovr_GetMirrorTextureBufferGL.Ptr(session, mirror, texId);
 }
 
-#if !defined(OSX_UNIMPLEMENTED)
+#if !defined(__APPLE__)
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetInstanceExtensionsVk(
     ovrGraphicsLuid luid,
@@ -1842,7 +1844,7 @@ ovr_GetMirrorTextureBufferVk(
 
   return API.ovr_GetMirrorTextureBufferVk.Ptr(session, mirrorTexture, out_Image);
 }
-#endif // OSX_UNIMPLEMENTED
+#endif // __APPLE__
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainLength(ovrSession session, ovrTextureSwapChain chain, int* length) {
