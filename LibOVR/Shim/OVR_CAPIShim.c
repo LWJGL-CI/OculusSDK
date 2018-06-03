@@ -43,7 +43,7 @@ limitations under the License.
 #pragma warning(pop)
 #endif
 
-#include "../Include/OVR_CAPI_D3D.h"
+#include "OVR_CAPI_D3D.h"
 #else
 #if defined(__APPLE__)
 #include <mach-o/dyld.h>
@@ -56,8 +56,8 @@ limitations under the License.
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
-#include "../Include/OVR_CAPI_GL.h"
-#include "../Include/OVR_CAPI_Vk.h"
+#include "OVR_CAPI_GL.h"
+#include "OVR_CAPI_Vk.h"
 
 
 #if defined(_MSC_VER)
@@ -1898,6 +1898,17 @@ ovr_DestroyMirrorTexture(ovrSession session, ovrMirrorTexture mirrorTexture) {
     return;
 
   API.ovr_DestroyMirrorTexture.Ptr(session, mirrorTexture);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetViewportStencil(
+    ovrSession session,
+    const ovrViewportStencilDesc* viewportStencilDesc,
+    ovrViewportStencilMeshBuffer* outMeshBuffer) {
+  if (!API.ovr_GetViewportStencil.Ptr)
+    return ovrError_NotInitialized;
+
+  return API.ovr_GetViewportStencil.Ptr(session, viewportStencilDesc, outMeshBuffer);
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)

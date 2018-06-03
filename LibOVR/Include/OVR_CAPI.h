@@ -305,6 +305,11 @@ typedef struct OVR_ALIGNAS(4) ovrVector3f_ {
   float x, y, z;
 } ovrVector3f;
 
+/// A 4D vector with float components.
+typedef struct OVR_ALIGNAS(4) ovrVector4f_ {
+  float x, y, z, w;
+} ovrVector4f;
+
 /// A 4x4 matrix with float elements.
 typedef struct OVR_ALIGNAS(4) ovrMatrix4f_ {
   float M[4][4];
@@ -661,6 +666,7 @@ typedef enum ovrTextureBindFlags_ {
   /// This flag cannot be combined with ovrTextureBind_DX_RenderTarget.
   ovrTextureBind_DX_DepthStencil = 0x0004,
 
+
   ovrTextureBind_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureBindFlags;
 
@@ -702,6 +708,7 @@ typedef enum ovrTextureFormat_ {
   OVR_FORMAT_BC7_UNORM_SRGB = 24,
 
 
+  OVR_FORMAT_LAST,
   OVR_FORMAT_ENUMSIZE = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureFormat;
 
@@ -732,6 +739,7 @@ typedef enum ovrTextureMiscFlags_ {
   /// Mips are regenerated from highest quality level, ignoring other pre-existing mip levels.
   /// Not supported for depth or compressed (BC) formats.
   ovrTextureMisc_AutoGenerateMips = 0x0008,
+
 
   ovrTextureMisc_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureFlags;
@@ -806,6 +814,31 @@ typedef struct ovrMirrorTextureDesc_ {
 typedef struct ovrTextureSwapChainData* ovrTextureSwapChain;
 typedef struct ovrMirrorTextureData* ovrMirrorTexture;
 
+typedef enum ovrViewportStencilType_ {
+  ovrViewportStencil_HiddenArea = 0, /// Triangle mesh covering parts that are hidden to users
+  ovrViewportStencil_VisibleArea = 1, /// Triangle mesh covering parts that are visible to users
+  ovrViewportStencil_BorderLine = 2, /// Line buffer that draws the boundary visible to users
+
+  ovrViewportStencilType_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+} ovrViewportStencilType;
+typedef struct ovrViewportStencilDesc_ {
+  ovrViewportStencilType StencilType;
+  ovrEyeType Eye;
+  ovrFovPort FovPort; /// Typically Fov obtained from ovrEyeRenderDesc
+  ovrQuatf HmdToEyeRotation; /// Typically HmdToEyePose.Orientation obtained from ovrEyeRenderDesc
+} ovrViewportStencilDesc;
+typedef struct ovrViewportStencilMeshBuffer_ {
+  /// Vertex info
+  int AllocVertexCount; /// To be filled in by caller of ovr_GetViewportStencil
+  int UsedVertexCount; /// To be filled in by SDK and returned to caller
+  ovrVector2f* VertexBuffer; /// To be allocated by caller and filled in by SDK
+
+  /// Index info
+  int AllocIndexCount; /// To be filled in by caller of ovr_GetViewportStencil
+  int UsedIndexCount; /// To be filled in by SDK and returned to caller
+  uint16_t* IndexBuffer; /// To be allocated by caller and filled in by SDK
+} ovrViewportStencilMeshBuffer;
+
 //-----------------------------------------------------------------------------------
 
 /// Describes button input types.
@@ -814,10 +847,10 @@ typedef struct ovrMirrorTextureData* ovrMirrorTexture;
 /// The ovrButton_Up/Down/Left/Right map to both XBox D-Pad and directional buttons.
 /// The ovrButton_Enter and ovrButton_Return map to Start and Back controller buttons, respectively.
 typedef enum ovrButton_ {
-  /// A button on XBox controllers and right Touch controller. Select button on Oculus Remote.
+  /// A button on XBox controllers and right Touch controller. Not present on Oculus Remote.
   ovrButton_A = 0x00000001,
 
-  /// B button on XBox controllers and right Touch controller. Back button on Oculus Remote.
+  /// B button on XBox controllers and right Touch controller. Not present on Oculus Remote.
   ovrButton_B = 0x00000002,
 
   /// Right thumbstick on XBox controllers and Touch controllers. Not present on Oculus Remote.
@@ -852,11 +885,12 @@ typedef enum ovrButton_ {
   ovrButton_Right = 0x00080000,
 
   /// Start on XBox 360 controller. Menu on XBox One controller and Left Touch controller.
+  /// Select button on Oculus Remote.
   /// Should be referred to as the Menu button in user-facing documentation.
   ovrButton_Enter = 0x00100000,
 
-  /// Back on Xbox 360 controller. View button on XBox One controller. Not present on Touch
-  /// controllers or Oculus Remote.
+  /// Back on Xbox 360 controller and Oculus Remote. View button on XBox One controller.
+  /// Not present on Touch controllers.
   ovrButton_Back = 0x00200000,
 
   /// Volume button on Oculus Remote. Not present on XBox or Touch controllers.

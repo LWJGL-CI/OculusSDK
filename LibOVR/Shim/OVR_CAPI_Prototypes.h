@@ -46,6 +46,7 @@ _(ovrTrackerPose, ovr_GetTrackerPose, , (ovrSession session, unsigned int index)
 _(ovrResult, ovr_GetInputState, , (ovrSession session, ovrControllerType controllerType, ovrInputState*)) \
 _(unsigned int, ovr_GetConnectedControllerTypes, , (ovrSession session)) \
 _(ovrSizei, ovr_GetFovTextureSize, , (ovrSession session, ovrEyeType eye, ovrFovPort fov, float pixelsPerDisplayPixel)) \
+_(ovrResult, ovr_GetViewportStencil, , (ovrSession session, const ovrViewportStencilDesc* viewportStencilDesc, ovrViewportStencilMeshBuffer* outMeshBuffer)) \
 _(ovrResult, ovr_WaitToBeginFrame, , (ovrSession session, long long frameIndex)) \
 _(ovrResult, ovr_BeginFrame, , (ovrSession session, long long frameIndex)) \
 _(ovrResult, ovr_EndFrame, , (ovrSession session, long long frameIndex, const ovrViewScaleDesc* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \
