@@ -1098,6 +1098,10 @@ static void OVR_UnloadSharedLibrary() {
   hLibOVR = NULL;
 }
 
+// Don't put this on the heap
+static ovrErrorInfo LastInitializeErrorInfo = {ovrError_NotInitialized,
+                                               "ovr_Initialize never called"};
+
 static ovrResult OVR_LoadSharedLibrary(int requestedProductVersion, int requestedMajorVersion) {
   FilePathCharType filePath[OVR_MAX_PATH];
   const char* SymbolName = NULL;
@@ -1113,8 +1117,14 @@ static ovrResult OVR_LoadSharedLibrary(int requestedProductVersion, int requeste
       sizeof(filePath) / sizeof(filePath[0]),
       &result);
 
-  if (!hLibOVR)
+  if (!hLibOVR) {
+    LastInitializeErrorInfo.Result = result;
+    OVR_strlcpy(
+        LastInitializeErrorInfo.ErrorString,
+        "Unable to load LibOVRRT DLL",
+        sizeof(LastInitializeErrorInfo.ErrorString));
     return result;
+  }
 
   // Zero the API table just to be paranoid
   memset(&API, 0, sizeof(API));
@@ -1124,8 +1134,15 @@ static ovrResult OVR_LoadSharedLibrary(int requestedProductVersion, int requeste
   SymbolName = #FunctionName #OptionalVersion;                                 \
   API.FunctionName.Symbol = OVR_DLSYM(hLibOVR, SymbolName);                    \
   if (!API.FunctionName.Symbol) {                                              \
-    fprintf(stderr, "Unable to locate symbol: %s\n", SymbolName);              \
-    result = ovrError_LibSymbols;                                              \
+    LastInitializeErrorInfo.Result = result = ovrError_LibSymbols;             \
+    OVR_strlcpy(                                                               \
+        LastInitializeErrorInfo.ErrorString,                                   \
+        "Unable to locate LibOVRRT symbol: ",                                  \
+        sizeof(LastInitializeErrorInfo.ErrorString));                          \
+    OVR_strlcat(                                                               \
+        LastInitializeErrorInfo.ErrorString,                                   \
+        SymbolName,                                                            \
+        sizeof(LastInitializeErrorInfo.ErrorString));                          \
     goto FailedToLoadSymbol;                                                   \
   }
 
@@ -1150,10 +1167,6 @@ static const ovrInitParams DefaultParams = {
     0, // ConnectionTimeoutSeconds
     OVR_ON64("") // pad0
 };
-
-// Don't put this on the heap
-static ovrErrorInfo LastInitializeErrorInfo = {ovrError_NotInitialized,
-                                               "ovr_Initialize never called"};
 
 OVR_PUBLIC_FUNCTION(ovrResult) ovr_Initialize(const ovrInitParams* inputParams) {
   ovrResult result;
@@ -1901,14 +1914,14 @@ ovr_DestroyMirrorTexture(ovrSession session, ovrMirrorTexture mirrorTexture) {
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_GetViewportStencil(
+ovr_GetFovStencil(
     ovrSession session,
-    const ovrViewportStencilDesc* viewportStencilDesc,
-    ovrViewportStencilMeshBuffer* outMeshBuffer) {
-  if (!API.ovr_GetViewportStencil.Ptr)
+    const ovrFovStencilDesc* fovStencilDesc,
+    ovrFovStencilMeshBuffer* meshBuffer) {
+  if (!API.ovr_GetFovStencil.Ptr)
     return ovrError_NotInitialized;
 
-  return API.ovr_GetViewportStencil.Ptr(session, viewportStencilDesc, outMeshBuffer);
+  return API.ovr_GetFovStencil.Ptr(session, fovStencilDesc, meshBuffer);
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)

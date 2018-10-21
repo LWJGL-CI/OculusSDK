@@ -18,6 +18,7 @@
 #endif
 
 
+
 #include <stdint.h>
 
 #if defined(_MSC_VER)
@@ -750,7 +751,7 @@ typedef enum ovrTextureMiscFlags_ {
 /// \see ovr_CreateTextureSwapChainGL
 ///
 typedef struct ovrTextureSwapChainDesc_ {
-  ovrTextureType Type; ///< Must not be ovrTexture_Window
+  ovrTextureType Type; ///< Must be ovrTexture_2D
   ovrTextureFormat Format;
   int ArraySize; ///< Must be 6 for ovrTexture_Cube, 1 for other types.
   int Width;
@@ -793,6 +794,11 @@ typedef enum ovrMirrorOptions_ {
   /// Shows the system menu (triggered by hitting the Home button) on the mirror texture
   ovrMirrorOption_IncludeSystemGui = 0x0020,
 
+  /// Forces mirror output to use max symmetric FOV instead of asymmetric full FOV used by HMD.
+  /// Only valid for rectilinear mirrors i.e. using ovrMirrorOption_PostDistortion with
+  /// ovrMirrorOption_ForceSymmetricFov will result in ovrError_InvalidParameter error.
+  ovrMirrorOption_ForceSymmetricFov = 0x0040,
+
 
   ovrMirrorOption_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrMirrorOptions;
@@ -814,30 +820,103 @@ typedef struct ovrMirrorTextureDesc_ {
 typedef struct ovrTextureSwapChainData* ovrTextureSwapChain;
 typedef struct ovrMirrorTextureData* ovrMirrorTexture;
 
-typedef enum ovrViewportStencilType_ {
-  ovrViewportStencil_HiddenArea = 0, /// Triangle mesh covering parts that are hidden to users
-  ovrViewportStencil_VisibleArea = 1, /// Triangle mesh covering parts that are visible to users
-  ovrViewportStencil_BorderLine = 2, /// Line buffer that draws the boundary visible to users
+//-----------------------------------------------------------------------------------
 
-  ovrViewportStencilType_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
-} ovrViewportStencilType;
-typedef struct ovrViewportStencilDesc_ {
-  ovrViewportStencilType StencilType;
+/// Fov-stencil mesh for assisting in rendering efficiency for clients using EyeFov layers
+
+/// A fov-stencil mesh is used to cull out the parts of the eye render target used in
+/// ovrLayerType_EyeFov & ovrLayerType_EyeFovDepth layers that would not normally be visible to
+/// the user wearing the HMD.
+///
+/// A rasterized eye render target is rectangular, but the parts of the render target visible to the
+/// user do not necessarily follow a rectangular region. This is where the fov-stencil mesh
+/// helps designate the boundaries of the visible parts for a given eye render target.
+///
+/// To make effective use of this mesh, the client should render the mesh before kicking off any
+/// other rendering work. Ideally the mesh would be rendered at the near-depth plane distance, or
+/// into the stencil buffer right after clearing the depth-stencil buffer. The choice of using
+/// depth vs. stencil is left up to the client, but the client should make sure that the mesh is
+/// rendered in a way that it can make use of Hierarchical-Z or Hierarchical-Stencil for better
+/// performance on rejected geometry post-vertex shading.
+
+/// Viewport stencil types provided by the ovr_GetFovStencil call.
+/// \see ovr_GetFovStencil
+typedef enum ovrFovStencilType_ {
+  ovrFovStencil_HiddenArea = 0, ///< Triangle list covering parts that are hidden to users
+  ovrFovStencil_VisibleArea = 1, ///< Triangle list covering parts that are visible to users
+  ovrFovStencil_BorderLine = 2, ///< Line list that draws the boundary visible to users
+
+  ovrFovStencilType_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+} ovrFovStencilType;
+
+/// Identifies flags used by ovrFovStencilDesc and which are passed to ovr_GetFovStencil.
+/// \see ovrFovStencilDesc
+typedef enum ovrFovStencilFlags_ {
+
+  /// When used, flips the Y component of the provided 2D mesh coordinates, such that Y increases
+  /// upwards. When not used, places mesh origin at top-left where Y increases downwards.
+  ovrFovStencilFlag_MeshOriginAtBottomLeft = 0x01,
+
+  ovrFovStencilFlag_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+} ovrFovStencilFlags;
+
+/// Fov-stencil mesh descriptor passed into the function ovr_GetFovStencil
+/// \see ovr_GetFovStencil
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrFovStencilDesc_ {
+  ovrFovStencilType StencilType;
+  uint32_t StencilFlags; ///< Bit flag combination of ovrFovStencilFlags
   ovrEyeType Eye;
-  ovrFovPort FovPort; /// Typically Fov obtained from ovrEyeRenderDesc
-  ovrQuatf HmdToEyeRotation; /// Typically HmdToEyePose.Orientation obtained from ovrEyeRenderDesc
-} ovrViewportStencilDesc;
-typedef struct ovrViewportStencilMeshBuffer_ {
+  ovrFovPort FovPort; ///< Typically Fov obtained from ovrEyeRenderDesc
+  ovrQuatf HmdToEyeRotation; ///< Typically HmdToEyePose.Orientation obtained from ovrEyeRenderDesc
+} ovrFovStencilDesc;
+
+/// Contains the data for the fov-stencil mesh. Parts of the struct are filled by the caller
+/// while some parts are filled by the SDK.
+/// \see ovr_GetFovStencil
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrFovStencilMeshBuffer_ {
   /// Vertex info
-  int AllocVertexCount; /// To be filled in by caller of ovr_GetViewportStencil
-  int UsedVertexCount; /// To be filled in by SDK and returned to caller
-  ovrVector2f* VertexBuffer; /// To be allocated by caller and filled in by SDK
+  int AllocVertexCount; ///< To be filled in by caller of ovr_GetFovStencil
+  int UsedVertexCount; ///< To be filled in by SDK and returned to caller
+  ovrVector2f* VertexBuffer; ///< To be allocated by caller and filled in by SDK
 
   /// Index info
-  int AllocIndexCount; /// To be filled in by caller of ovr_GetViewportStencil
-  int UsedIndexCount; /// To be filled in by SDK and returned to caller
-  uint16_t* IndexBuffer; /// To be allocated by caller and filled in by SDK
-} ovrViewportStencilMeshBuffer;
+  int AllocIndexCount; ///< To be filled in by caller of ovr_GetFovStencil
+  int UsedIndexCount; ///< To be filled in by SDK and returned to caller
+  uint16_t* IndexBuffer; ///< To be allocated by caller and filled in by SDK
+} ovrFovStencilMeshBuffer;
+
+/// Returns a viewport stencil mesh to be used for defining the area or outline the user
+/// can see through the lens on an area defined by a given ovrFovPort.
+///
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
+/// \param[in] fovStencilDesc Info provided by caller necessary to generate a stencil mesh.
+/// \param[in] meshBuffer Mesh buffer to be partially filled in and returned by the SDK.
+///
+/// \return Returns an ovrResult indicating success or failure. In the case of
+///         failure, use ovr_GetLastErrorInfo to get more information.
+///         Return values include but aren't limited to:
+///     - ovrSuccess: Completed successfully.
+///     - ovrError_ServiceConnection: The service connection was lost and the application
+///       must destroy the session.
+///     - ovrError_InvalidParameter: One or more of the parameters
+///
+/// To find out how big the vertex and index buffers in meshBuffer buffer should be, first call
+/// this function setting AllocVertexCount & AllocIndexCount to 0 while also sending in nullptr
+/// for VertexBuffer & IndexBuffer. The SDK will populate UsedVertexCount & UsedIndexCount values.
+///
+/// If Alloc*Count fields in meshBuffer are smaller than the expected Used*Count fields,
+/// (except when they are 0) then the SDK will return ovrError_InvalidParameter and leave
+/// VertexBuffer and IndexBuffer untouched.
+///
+/// 2D positions provided in the buffer will be in the [0,1] range where Y increases downward,
+/// similar to texture-UV space. If Y coordinates need to be flipped upside down, use the
+/// ovrFovStencilFlag_MeshOriginAtBottomLeft.
+///
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetFovStencil(
+    ovrSession session,
+    const ovrFovStencilDesc* fovStencilDesc,
+    ovrFovStencilMeshBuffer* meshBuffer);
 
 //-----------------------------------------------------------------------------------
 
@@ -1153,6 +1232,7 @@ typedef struct ovrInputState_ {
   /// -1.0f to 1.0f
   /// No deadzone or filter
   ovrVector2f ThumbstickRaw[ovrHand_Count];
+
 } ovrInputState;
 
 typedef struct ovrCameraIntrinsics_ {
@@ -1604,6 +1684,7 @@ typedef struct ovrSessionStatus_ {
   /// True if a system overlay is present, such as a dashboard. In this case the application
   /// (if visible) should pause while still drawing, avoid drawing near-field graphics so they
   /// don't visually fight with the system overlay, and consume fewer CPU and GPU resources.
+  /// \deprecated Do not use.
   ovrBool OverlayPresent;
 
   /// True if runtime is requesting that the application provide depth buffers with projection
@@ -2181,6 +2262,7 @@ typedef enum ovrLayerFlags_ {
   ovrLayerFlag_HeadLocked = 0x04,
 
 
+  ovrLayerFlags_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrLayerFlags;
 
 /// Defines properties shared by all ovrLayer structs, such as ovrLayerEyeFov.
@@ -2875,7 +2957,7 @@ ovr_EndFrame(
 
 /// Submits layers for distortion and display.
 ///
-/// Deprecated.  Use ovr_WaitToBeginFrame, ovr_BeginFrame, and ovr_EndFrame instead.
+/// \deprecated  Use ovr_WaitToBeginFrame, ovr_BeginFrame, and ovr_EndFrame instead.
 ///
 /// ovr_SubmitFrame triggers distortion and processing which might happen asynchronously.
 /// The function will return when there is room in the submission queue and surfaces

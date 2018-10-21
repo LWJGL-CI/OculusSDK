@@ -20,6 +20,9 @@
 //
 
 
+struct ovrViewportStencilDesc_;
+typedef struct ovrViewportStencilDesc_ ovrViewportStencilDesc;
+
 // clang-format off
 
 #define OVR_LIST_PUBLIC_APIS(_,X) \
@@ -46,7 +49,8 @@ _(ovrTrackerPose, ovr_GetTrackerPose, , (ovrSession session, unsigned int index)
 _(ovrResult, ovr_GetInputState, , (ovrSession session, ovrControllerType controllerType, ovrInputState*)) \
 _(unsigned int, ovr_GetConnectedControllerTypes, , (ovrSession session)) \
 _(ovrSizei, ovr_GetFovTextureSize, , (ovrSession session, ovrEyeType eye, ovrFovPort fov, float pixelsPerDisplayPixel)) \
-_(ovrResult, ovr_GetViewportStencil, , (ovrSession session, const ovrViewportStencilDesc* viewportStencilDesc, ovrViewportStencilMeshBuffer* outMeshBuffer)) \
+X(ovrResult, ovr_GetViewportStencil, , (ovrSession session, const ovrViewportStencilDesc* viewportStencilDesc, ovrFovStencilMeshBuffer* meshBuffer)) \
+_(ovrResult, ovr_GetFovStencil, , (ovrSession session, const ovrFovStencilDesc* fovStencilDesc, ovrFovStencilMeshBuffer* meshBuffer)) \
 _(ovrResult, ovr_WaitToBeginFrame, , (ovrSession session, long long frameIndex)) \
 _(ovrResult, ovr_BeginFrame, , (ovrSession session, long long frameIndex)) \
 _(ovrResult, ovr_EndFrame, , (ovrSession session, long long frameIndex, const ovrViewScaleDesc* viewScaleDesc, ovrLayerHeader const * const * layerPtrList, unsigned int layerCount)) \

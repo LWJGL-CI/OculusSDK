@@ -52,9 +52,18 @@ limitations under the License.
 #include <windows.h>
 #endif
 
-// Used to generate projection from ovrEyeDesc::Fov
-OVR_PUBLIC_FUNCTION(ovrMatrix4f)
-ovrMatrix4f_Projection(ovrFovPort fov, float znear, float zfar, unsigned int projectionModFlags) {
+#if defined(OVR_DLL_BUILD) && defined(OVR_OPENXR_SUPPORT_ENABLED)
+
+// This forces transitive export of the symbols marked for export in OVR_OpenXR_Impl.cpp:
+__pragma(comment(linker, "/INCLUDE:" OVR_ON32("_") "exported_openxr_version"))
+#endif // defined(OVR_DLL_BUILD) && defined(OVR_OPENXR_SUPPORT_ENABLED)
+
+    // Used to generate projection from ovrEyeDesc::Fov
+    OVR_PUBLIC_FUNCTION(ovrMatrix4f) ovrMatrix4f_Projection(
+        ovrFovPort fov,
+        float znear,
+        float zfar,
+        unsigned int projectionModFlags) {
   bool leftHanded = (projectionModFlags & ovrProjection_LeftHanded) > 0;
   bool flipZ = (projectionModFlags & ovrProjection_FarLessThanNear) > 0;
   bool farAtInfinity = (projectionModFlags & ovrProjection_FarClipAtInfinity) > 0;

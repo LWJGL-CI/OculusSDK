@@ -4164,6 +4164,42 @@ struct ScaleAndOffset2D {
 
   ScaleAndOffset2D(float sx = 0.0f, float sy = 0.0f, float ox = 0.0f, float oy = 0.0f)
       : Scale(sx, sy), Offset(ox, oy) {}
+
+  Vector2f ApplyTo(const Vector2f& input) const {
+    return input * Scale + Offset;
+  }
+
+  ScaleAndOffset2D Invert() const {
+    ScaleAndOffset2D inverted;
+    inverted.Scale = Vector2f(1.0f) / this->Scale;
+    inverted.Offset = -(this->Offset) * inverted.Scale;
+    return inverted;
+  }
+
+  // nextSO is the other scale-offset operation that would have normally followed this scale-offset.
+  // Result is a single scale-offset operation that can be applied to an input instead of
+  // two or more separate scale-offset applications on a given Vector2f input.
+  //
+  // So this:
+  //  ScaleAndOffset2D so1, so2, so3; // initialized to some values
+  //  Vector2f input = Vector2f(2.0f, -1.0f);
+  //  input = so1.ApplyTo(input);
+  //  input = so2.ApplyTo(input);
+  //  input = so3.ApplyTo(input);
+  //
+  // equals this:
+  //  ScaleAndOffset2D so1, so2, so3; // initialized to some values
+  //  so1 = so1.Combine(so2);
+  //  so1 = so1.Combine(so3);
+  //  Vector2f input = Vector2f(2.0f, -1.0f);
+  //  input = so1.ApplyTo(input);
+  //
+  ScaleAndOffset2D Combine(const ScaleAndOffset2D& nextSO) const {
+    ScaleAndOffset2D retValSO;
+    retValSO.Offset = this->Offset * nextSO.Scale + nextSO.Offset;
+    retValSO.Scale = nextSO.Scale * this->Scale;
+    return retValSO;
+  }
 };
 
 //-----------------------------------------------------------------------------------
