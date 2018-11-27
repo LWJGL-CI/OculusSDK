@@ -1,7 +1,7 @@
 /********************************************************************************/ /**
  \file      OVR_Math.h
  \brief     Implementation of 3D primitives such as vectors, matrices.
- \copyright Copyright 2014-2016 Oculus VR, LLC All Rights reserved.
+ \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  *************************************************************************************/
 
 #ifndef OVR_Math_h
@@ -4346,6 +4346,24 @@ struct FovPort {
     uncantedFov.RightTan = OVRMath_Max(-rightDown.x, -rightUp.x);
 
     return uncantedFov;
+  }
+
+  // Widens a given FovPort by specified angle in each direction
+  static FovPort Expand(const FovPort& inFov, float expandAngle) {
+    auto ClampedExpand = [expandAngle](float t) -> float {
+      // We don't want gigantic values coming out of this function, so we limit resulting FOV.
+      // Limit before calling tanf() to avoid wrap around to negative values.
+      const float limitFov = atanf(10.0f);
+      return tanf(OVRMath_Min(OVRMath_Max(atanf(t) + expandAngle, -limitFov), limitFov));
+    };
+
+    FovPort modFov = FovPort(
+        ClampedExpand(inFov.UpTan),
+        ClampedExpand(inFov.DownTan),
+        ClampedExpand(inFov.LeftTan),
+        ClampedExpand(inFov.RightTan));
+
+    return modFov;
   }
 
   template <class T>

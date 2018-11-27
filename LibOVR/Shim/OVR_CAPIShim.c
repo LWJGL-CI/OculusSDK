@@ -3,7 +3,7 @@
 Filename    :   OVR_CAPIShim.c
 Content     :   CAPI DLL user library
 Created     :   November 20, 2014
-Copyright   :   Copyright 2014-2016 Oculus VR, LLC All Rights reserved.
+Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
 Licensed under the Oculus VR Rift SDK License Version 3.3 (the "License");
 you may not use the Oculus VR Rift SDK except in compliance with the License,

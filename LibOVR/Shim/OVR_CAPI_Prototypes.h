@@ -1,7 +1,7 @@
 /********************************************************************************/ /**
  \file      OVR_CAPI_Prototypes.h
  \brief     Internal CAPI prototype listing macros
- \copyright Copyright 2016 Oculus VR, LLC. All Rights reserved.
+ \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  ************************************************************************************/
 
 #ifndef OVR_CAPI_Prototypes_h

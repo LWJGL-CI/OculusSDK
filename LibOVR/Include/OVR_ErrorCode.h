@@ -1,7 +1,7 @@
 /********************************************************************************/ /**
  \file  OVR_ErrorCode.h
  \brief     This header provides LibOVR error code declarations.
- \copyright Copyright 2015-2016 Oculus VR, LLC All Rights reserved.
+ \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  *************************************************************************************/
 
 #ifndef OVR_ErrorCode_h

@@ -1,7 +1,7 @@
 /************************************************************************************
  \file      OVR_CAPI.h
  \brief     C Interface to the Oculus PC SDK tracking and rendering library.
- \copyright Copyright 2014 Oculus VR, LLC All Rights reserved.
+ \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  ************************************************************************************/
 
 // We don't use version numbers within OVR_CAPI_h, as all versioned variations
@@ -866,8 +866,9 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrFovStencilDesc_ {
   ovrFovStencilType StencilType;
   uint32_t StencilFlags; ///< Bit flag combination of ovrFovStencilFlags
   ovrEyeType Eye;
-  ovrFovPort FovPort; ///< Typically Fov obtained from ovrEyeRenderDesc
+  ovrFovPort FovPort; ///< Typically FOV obtained from ovrEyeRenderDesc
   ovrQuatf HmdToEyeRotation; ///< Typically HmdToEyePose.Orientation obtained from ovrEyeRenderDesc
+                             ///< Note: Currently unsupported, always treated as identity
 } ovrFovStencilDesc;
 
 /// Contains the data for the fov-stencil mesh. Parts of the struct are filled by the caller
@@ -1353,6 +1354,7 @@ typedef enum ovrInitFlags_ {
   /// This client is aware of ovrSessionStatus focus states (e.g. ovrSessionStatus::HasInputFocus),
   /// and responds to them appropriately (e.g. pauses and stops drawing hands when lacking focus).
   ovrInit_FocusAware = 0x00000040,
+
 
 
 

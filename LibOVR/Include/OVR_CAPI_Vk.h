@@ -1,7 +1,7 @@
 /********************************************************************************/ /**
  \file      OVR_CAPI_Vk.h
  \brief     Vulkan specific structures used by the CAPI interface.
- \copyright Copyright 2014-2017 Oculus VR, LLC All Rights reserved.
+ \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  ************************************************************************************/
 
 #ifndef OVR_CAPI_Vk_h
@@ -9,7 +9,6 @@
 
 #include "OVR_CAPI.h"
 #include "OVR_Version.h"
-
 
 #if !defined(OVR_EXPORTING_CAPI)
 
