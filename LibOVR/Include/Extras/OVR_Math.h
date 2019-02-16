@@ -1332,6 +1332,120 @@ typedef Size<unsigned> Sizeu;
 typedef Size<float> Sizef;
 typedef Size<double> Sized;
 
+//-------------------------------------------------------------------------------------
+// ***** Size3
+
+// Size3 class represents 3D size with Width, Height, Depth components.
+// Used to describe distentions of render targets, etc.
+
+template <class T>
+class Size3 {
+ public:
+  T w, h, d;
+
+  Size3() : w(0), h(0), d(0) {}
+  Size3(T w_, T h_, T d_) : w(w_), h(h_), d(d_) {}
+  explicit Size3(T s) : w(s), h(s), d(s) {}
+  explicit Size3(const Size<typename Math<T>::OtherFloatType>& src)
+      : w((T)src.w), h((T)src.h), d((T)1) {}
+  explicit Size3(const Size3<typename Math<T>::OtherFloatType>& src)
+      : w((T)src.w), h((T)src.h), d((T)src.d) {}
+
+  // C-interop support.
+  typedef typename CompatibleTypes<Size3<T>>::Type CompatibleType;
+
+  Size3(const CompatibleType& s) : w(s.w), h(s.h), d(s.d) {}
+
+  operator const CompatibleType&() const {
+    OVR_MATH_STATIC_ASSERT(sizeof(Size3<T>) == sizeof(CompatibleType), "sizeof(Size3<T>) failure");
+    return reinterpret_cast<const CompatibleType&>(*this);
+  }
+
+  bool operator==(const Size3& b) const {
+    return w == b.w && h == b.h && d == b.d;
+  }
+  bool operator!=(const Size3& b) const {
+    return w != b.w || h != b.h || d != b.d;
+  }
+
+  Size3 operator+(const Size3& b) const {
+    return Size3(w + b.w, h + b.h, d + b.d);
+  }
+  Size3& operator+=(const Size3& b) {
+    w += b.w;
+    h += b.h;
+    d += b.d;
+    return *this;
+  }
+  Size3 operator-(const Size3& b) const {
+    return Size(w - b.w, h - b.h, d - b.d);
+  }
+  Size3& operator-=(const Size3& b) {
+    w -= b.w;
+    h -= b.h;
+    d -= b.d;
+    return *this;
+  }
+  Size3 operator-() const {
+    return Size3(-w, -h, -d);
+  }
+  Size3 operator*(const Size3& b) const {
+    return Size(w * b.w, h * b.h, d * b.d);
+  }
+  Size3& operator*=(const Size3& b) {
+    w *= b.w;
+    h *= b.h;
+    d *= b.d;
+    return *this;
+  }
+  Size3 operator/(const Size3& b) const {
+    return Size3(w / b.w, h / b.h, d / b.d);
+  }
+  Size3& operator/=(const Size3& b) {
+    w /= b.w;
+    h /= b.h;
+    d /= b.d;
+    return *this;
+  }
+
+  // Scalar multiplication/division scales both components.
+  Size3 operator*(T s) const {
+    return Size3(w * s, h * s, d * s);
+  }
+  Size3& operator*=(T s) {
+    w *= s;
+    h *= s;
+    d *= s;
+    return *this;
+  }
+  Size3 operator/(T s) const {
+    return Size3(w / s, h / s, d / s);
+  }
+  Size3& operator/=(T s) {
+    w /= s;
+    h /= s;
+    d /= s;
+    return *this;
+  }
+
+  static Size3 Min(const Size3& a, const Size3& b) {
+    return Size3((a.w < b.w) ? a.w : b.w, (a.h < b.h) ? a.h : b.h, (a.d < b.d) ? a.d : b.d);
+  }
+  static Size3 Max(const Size3& a, const Size3& b) {
+    return Size3((a.w > b.w) ? a.w : b.w, (a.h > b.h) ? a.h : b.h, (a.d > b.d) ? a.d : b.d);
+  }
+
+  T Volume() const {
+    return w * h * d;
+  }
+
+  inline Vector3<T> ToVector() const {
+    return Vector3<T>(w, h, d);
+  }
+};
+
+typedef Size3<unsigned> Size3u;
+
 //-----------------------------------------------------------------------------------
 // ***** Rect
 

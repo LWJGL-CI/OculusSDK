@@ -845,6 +845,8 @@ typedef enum ovrFovStencilType_ {
   ovrFovStencil_HiddenArea = 0, ///< Triangle list covering parts that are hidden to users
   ovrFovStencil_VisibleArea = 1, ///< Triangle list covering parts that are visible to users
   ovrFovStencil_BorderLine = 2, ///< Line list that draws the boundary visible to users
+  ovrFovStencil_VisibleRectangle = 3, ///< Axis-aligned rectangle fit in visible region
+                                      ///< 4x vertices: TopLeft, TopRight, BottomRight, BottomLeft
 
   ovrFovStencilType_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrFovStencilType;
