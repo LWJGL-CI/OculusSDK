@@ -1339,6 +1339,49 @@ OVR_PUBLIC_FUNCTION(void) ovr_Destroy(ovrSession session) {
 }
 
 OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_InitDesktopWindow(ovrSession session, ovrDesktopWindowHandle* outWindowHandle) {
+  if (!API.ovr_InitDesktopWindow.Ptr) {
+    return ovrError_ServiceError;
+  }
+  return API.ovr_InitDesktopWindow.Ptr(session, outWindowHandle);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_ShowDesktopWindow(ovrSession session, const ovrDesktopWindowDesc* windowDesc) {
+  if (!API.ovr_ShowDesktopWindow.Ptr) {
+    return ovrError_ServiceError;
+  }
+  return API.ovr_ShowDesktopWindow.Ptr(session, windowDesc);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_HideDesktopWindow(ovrSession session, ovrDesktopWindowHandle windowHandle) {
+  if (!API.ovr_HideDesktopWindow.Ptr) {
+    return ovrError_ServiceError;
+  }
+  return API.ovr_HideDesktopWindow.Ptr(session, windowHandle);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_GetHybridInputFocus(
+    ovrSession session,
+    ovrControllerType controllerType,
+    ovrHybridInputFocusState* outState) {
+  if (!API.ovr_GetHybridInputFocus.Ptr) {
+    return ovrError_ServiceError;
+  }
+  return API.ovr_GetHybridInputFocus.Ptr(session, controllerType, outState);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_ShowAvatarHands(ovrSession session, ovrBool showHands) {
+  if (!API.ovr_ShowAvatarHands.Ptr) {
+    return ovrError_ServiceError;
+  }
+  return API.ovr_ShowAvatarHands.Ptr(session, showHands);
+}
+
+OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
   if (!API.ovr_GetSessionStatus.Ptr) {
     if (sessionStatus) {
@@ -1965,6 +2008,7 @@ ovr_SubmitFrame(
 
   return API.ovr_SubmitFrame.Ptr(session, frameIndex, viewScaleDesc, layerPtrList, layerCount);
 }
+
 
 OVR_PUBLIC_FUNCTION(ovrEyeRenderDesc)
 ovr_GetRenderDesc(ovrSession session, ovrEyeType eyeType, ovrFovPort fov) {

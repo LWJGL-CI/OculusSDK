@@ -219,6 +219,17 @@
 #endif
 #endif
 
+// OVR_STATIC_ASSERT_OFFSETOF statically asserts offsetof(Type.member) == expected_offset
+#define OVR_STATIC_ASSERT_OFFSETOF(Type, member, expected_offset) \
+  OVR_STATIC_ASSERT(                                              \
+      offsetof(Type, member) == (expected_offset),                \
+      "Expected " #Type "." #member " offset == " #expected_offset)
+
+// OVR_STATIC_ASSERT_SIZEOF statically asserts sizeof(Type) == expected_size
+#define OVR_STATIC_ASSERT_SIZEOF(Type, expected_size) \
+  OVR_STATIC_ASSERT(                                  \
+      sizeof(Type) == (expected_size), "Expected sizeof(" #Type ") == " #expected_size)
+
 //-----------------------------------------------------------------------------------
 // ***** Padding
 //
@@ -688,7 +699,7 @@ typedef enum ovrTextureFormat_ {
   OVR_FORMAT_B8G8R8X8_UNORM = 8, ///< Not supported for OpenGL applications
   OVR_FORMAT_B8G8R8X8_UNORM_SRGB = 9, ///< Not supported for OpenGL applications
   OVR_FORMAT_R16G16B16A16_FLOAT = 10,
-  OVR_FORMAT_R11G11B10_FLOAT = 25, ///< Introduced in v1.10
+  OVR_FORMAT_R11G11B10_FLOAT = 25, ///< Not supported for D3D12 applications. Introduced in v1.10
 
   // Depth formats
   OVR_FORMAT_D16_UNORM = 11,
@@ -1422,9 +1433,11 @@ typedef struct OVR_ALIGNAS(8) ovrInitParams_ {
 
 } ovrInitParams;
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #if !defined(OVR_EXPORTING_CAPI)
 
@@ -1653,6 +1666,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_Create(ovrSession* pSession, ovrGraphicsLuid*
 /// \see ovr_Create
 ///
 OVR_PUBLIC_FUNCTION(void) ovr_Destroy(ovrSession session);
+
 
 #endif // !defined(OVR_EXPORTING_CAPI)
 
@@ -2238,6 +2252,7 @@ typedef enum ovrLayerType_ {
   ovrLayerType_Cube = 10,
 
 
+
   ovrLayerType_EnumSize = 0x7fffffff ///< Force type int32_t.
 
 } ovrLayerType;
@@ -2276,12 +2291,13 @@ typedef enum ovrLayerFlags_ {
 ///
 /// \see ovrLayerType, ovrLayerFlags
 ///
-typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ {
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ ovrLayerHeader;
+struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ {
   ovrLayerType Type; ///< Described by ovrLayerType.
   unsigned Flags; ///< Described by ovrLayerFlags.
 
   char Reserved[128];
-} ovrLayerHeader;
+};
 
 /// Describes a layer that specifies a monoscopic or stereoscopic view.
 /// This is the kind of layer that's typically used as layer 0 to ovr_SubmitFrame,
@@ -2377,6 +2393,7 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFovDepth_ {
   /// \see ovrTimewarpProjectionDesc_FromProjection
   ovrTimewarpProjectionDesc ProjectionDesc;
 } ovrLayerEyeFovDepth;
+
 
 /// Describes eye texture layouts. Used with ovrLayerEyeFovMultires.
 ///
@@ -3032,6 +3049,7 @@ ovr_SubmitFrame(
     const ovrViewScaleDesc* viewScaleDesc,
     ovrLayerHeader const* const* layerPtrList,
     unsigned int layerCount);
+
 ///@}
 
 #endif // !defined(OVR_EXPORTING_CAPI)

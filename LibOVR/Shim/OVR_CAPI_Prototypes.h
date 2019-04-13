@@ -100,7 +100,7 @@ _(ovrResult, ovr_RequestBoundaryVisible, , (ovrSession session, ovrBool visible)
 _(ovrResult, ovr_GetPerfStats, , (ovrSession session, ovrPerfStats* outPerfStats)) \
 _(ovrResult, ovr_ResetPerfStats, , (ovrSession session))\
 _(ovrResult, ovr_GetExternalCameras, , (ovrSession session, ovrExternalCamera* outCameras, unsigned int* outCameraCount))\
-_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))\
+_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))
 
 #if defined (_WIN32)
 #define OVR_LIST_WIN32_APIS(_,X) \
@@ -134,9 +134,24 @@ _(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char*
 struct ovrSensorData_;
 typedef struct ovrSensorData_ ovrSensorData;
 
+// Forward decclaration for ovrDesktopWindowDesc, ovrDesktopWindowHandle and ovrHybridInputFocusState, as
+// they won't be in a public OVR_CAPI.h header for now.
+struct ovrDesktopWindowDesc_;
+typedef struct ovrDesktopWindowDesc_ ovrDesktopWindowDesc;
+
+struct ovrHybridInputFocusState_;
+typedef struct ovrHybridInputFocusState_ ovrHybridInputFocusState;
+
+typedef uint32_t ovrDesktopWindowHandle;
+
 #define OVR_LIST_PRIVATE_APIS(_,X) \
 _(ovrTrackingState, ovr_GetTrackingStateWithSensorData, , (ovrSession session, double absTime, ovrBool latencyMarker, ovrSensorData* sensorData)) \
-_(ovrResult, ovr_GetDevicePoses, , (ovrSession session, ovrTrackedDeviceType* deviceTypes, int deviceCount, double absTime, ovrPoseStatef* outDevicePoses))
+_(ovrResult, ovr_GetDevicePoses, , (ovrSession session, ovrTrackedDeviceType* deviceTypes, int deviceCount, double absTime, ovrPoseStatef* outDevicePoses)) \
+_(ovrResult, ovr_InitDesktopWindow, , (ovrSession session, ovrDesktopWindowHandle* outWindowHandle)) \
+_(ovrResult, ovr_ShowDesktopWindow, , (ovrSession session, const ovrDesktopWindowDesc* windowDesc)) \
+_(ovrResult, ovr_HideDesktopWindow, , (ovrSession session, ovrDesktopWindowHandle windowHandle)) \
+_(ovrResult, ovr_GetHybridInputFocus, , (ovrSession session, ovrControllerType controllerType, ovrHybridInputFocusState* outState)) \
+_(ovrResult, ovr_ShowAvatarHands, , (ovrSession session, ovrBool showHands))
 
 // clang-format on
 
