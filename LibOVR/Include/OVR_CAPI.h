@@ -18,6 +18,9 @@
 #endif
 
 
+// Turn on OpenXR support on all builds
+// Note: we're not shipping the loader, only exposing xrNegotiateLoaderRuntimeInterface
+#define OVR_OPENXR_SUPPORT_ENABLED
 
 #include <stdint.h>
 
@@ -380,6 +383,7 @@ typedef enum ovrHmdType_ {
   ovrHmd_ES09 = 12,
   ovrHmd_ES11 = 13,
   ovrHmd_CV1 = 14,
+  ovrHmd_RiftS = 16,
 
   ovrHmd_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrHmdType;
@@ -452,6 +456,7 @@ typedef enum ovrTrackingOrigin_ {
   ovrTrackingOrigin_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTrackingOrigin;
 
+
 /// Identifies a graphics device in a platform-specific way.
 /// For Windows this is a LUID type.
 typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrGraphicsLuid_ {
@@ -462,7 +467,7 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrGraphicsLuid_ {
 /// This is a complete descriptor of the HMD.
 typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrHmdDesc_ {
   ovrHmdType Type; ///< The type of HMD.
-  OVR_ON64(OVR_UNUSED_STRUCT_PAD(pad0, 4)) ///< \internal struct paddding.
+  OVR_ON64(OVR_UNUSED_STRUCT_PAD(pad0, 4)) ///< \internal struct padding.
   char ProductName[64]; ///< UTF8-encoded product identification string (e.g. "Oculus Rift DK1").
   char Manufacturer[64]; ///< UTF8-encoded HMD manufacturer identification string.
   short VendorId; ///< HID (USB) vendor identifier of the device.
@@ -478,7 +483,7 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrHmdDesc_ {
   ovrFovPort MaxEyeFov[ovrEye_Count]; ///< Defines the maximum FOVs for the HMD.
   ovrSizei Resolution; ///< Resolution of the full HMD screen (both eyes) in pixels.
   float DisplayRefreshRate; ///< Refresh rate of the display in cycles per second.
-  OVR_ON64(OVR_UNUSED_STRUCT_PAD(pad1, 4)) ///< \internal struct paddding.
+  OVR_ON64(OVR_UNUSED_STRUCT_PAD(pad1, 4)) ///< \internal struct padding.
 } ovrHmdDesc;
 
 /// Used as an opaque pointer to an OVR session.
@@ -514,9 +519,28 @@ VK_DEFINE_NON_DISPATCHABLE_HANDLE(VkImage)
 /// \see ovrTrackingState
 ///
 typedef enum ovrStatusBits_ {
-  ovrStatus_OrientationTracked = 0x0001, ///< Orientation is currently tracked (connected & in use).
-  ovrStatus_PositionTracked = 0x0002, ///< Position is currently tracked (false if out of range).
-  ovrStatus_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+  // Device orientation is currently tracked. It's possible that the device orientation is not
+  // tracked,
+  // but its reported orientation is nevertheless valid (e.g. due to estimation)
+  ovrStatus_OrientationTracked = 0x0001,
+
+  // Device position is currently tracked. It's possible that the device position is not tracked,
+  // but its reported position is nevertheless valid (e.g. due to estimation).
+  ovrStatus_PositionTracked = 0x0002,
+
+  // The reported device orientation is valid for application use. In the case that OrientationValid
+  // is true and
+  // OrientationTracked is false, the runtime may be estimating the orientation of the device.
+  // In the case that OrientationValid is false, the application should not use the returned
+  // orientation value.
+  ovrStatus_OrientationValid = 0x0004,
+
+  // The reported device orientation is valid for application use. In the case that PositionValid is
+  // true and
+  // PositionTracked is false, the runtime may be estimating the position of the device.
+  // In the case that PositionValid is false, the application should not use the returned position
+  // value.
+  ovrStatus_PositionValid = 0x0008
 } ovrStatusBits;
 
 ///  Specifies the description of a single sensor.
@@ -579,7 +603,6 @@ typedef struct OVR_ALIGNAS(8) ovrTrackingState_ {
   ovrPoseStatef HandPoses[2];
 
   /// HandPoses status flags described by ovrStatusBits.
-  /// Only ovrStatus_OrientationTracked and ovrStatus_PositionTracked are reported.
   unsigned int HandStatusFlags[2];
 
   /// The pose of the origin captured during calibration.
@@ -1593,6 +1616,9 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_IdentifyClient(const char* identity);
 /// otherwise ovrHmdDesc::Type will be set to ovrHmd_None without
 /// checking for the HMD presence.
 ///
+/// For newer headsets being used on a game built against an old SDK version,
+/// we may return the ovrHmdType as ovrHmd_CV1 for backwards compatibility.
+///
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create() or NULL.
 ///
 /// \return Returns an ovrHmdDesc. If invoked with NULL session argument, ovrHmdDesc::Type
@@ -1605,6 +1631,9 @@ OVR_PUBLIC_FUNCTION(ovrHmdDesc) ovr_GetHmdDesc(ovrSession session);
 /// The number of trackers may change at any time, so this function should be called before use
 /// as opposed to once on startup.
 ///
+/// For newer headsets being used on a game built against an old SDK version,
+/// we may simulate three CV1 trackers to maintain backwards compatibility.
+///
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
 ///
 /// \return Returns unsigned int count.
@@ -1616,6 +1645,9 @@ OVR_PUBLIC_FUNCTION(unsigned int) ovr_GetTrackerCount(ovrSession session);
 /// ovr_Initialize must have first been called in order for this to succeed, otherwise the returned
 /// trackerDescArray will be zero-initialized. The data returned by this function can change at
 /// runtime.
+///
+/// For newer headsets being used on a game built against an old SDK version,
+/// we may simulate three CV1 trackers to maintain backwards compatibility.
 ///
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
 ///
@@ -1929,6 +1961,9 @@ ovr_GetDevicePoses(
 
 
 /// Returns the ovrTrackerPose for the given attached tracker.
+///
+/// For newer headsets being used on a game built against an old SDK version,
+/// we may simulate three CV1 trackers to maintain backwards compatibility.
 ///
 /// \param[in] session Specifies an ovrSession previously returned by ovr_Create.
 /// \param[in] trackerPoseIndex Index of the tracker being requested.
@@ -2291,7 +2326,7 @@ typedef enum ovrLayerFlags_ {
 ///
 /// \see ovrLayerType, ovrLayerFlags
 ///
-typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ ovrLayerHeader;
+typedef struct ovrLayerHeader_ ovrLayerHeader;
 struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerHeader_ {
   ovrLayerType Type; ///< Described by ovrLayerType.
   unsigned Flags; ///< Described by ovrLayerFlags.
@@ -2400,7 +2435,7 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerEyeFovDepth_ {
 typedef enum ovrTextureLayout_ {
   ovrTextureLayout_Rectilinear = 0, ///< Regular eyeFov layer.
   ovrTextureLayout_Octilinear = 1, ///< Octilinear extension must be enabled.
-  ovrTextureLayout_EnumSize = 0x7fffffff ///< Force type int32_t.
+  ovrTextureLayout_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureLayout;
 
 /// Multiresolution descriptor for Octilinear.

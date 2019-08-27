@@ -4495,6 +4495,14 @@ struct FovPort {
   }
 };
 
+inline bool isNan(const Vector3d& v) {
+  return v.IsNan();
+}
+
+inline bool isNan(const Vector3f& v) {
+  return v.IsNan();
+}
+
 } // Namespace OVR
 
 #if defined(_MSC_VER)

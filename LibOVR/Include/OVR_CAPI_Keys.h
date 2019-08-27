@@ -1,6 +1,6 @@
 /********************************************************************************/ /**
  \file      OVR_CAPI.h
- \brief     Keys for CAPI proprty function calls
+ \brief     Keys for CAPI property function calls
  \copyright Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
  ************************************************************************************/
 

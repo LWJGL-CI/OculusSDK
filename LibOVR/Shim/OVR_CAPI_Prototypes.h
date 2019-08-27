@@ -134,15 +134,22 @@ _(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char*
 struct ovrSensorData_;
 typedef struct ovrSensorData_ ovrSensorData;
 
-// Forward decclaration for ovrDesktopWindowDesc, ovrDesktopWindowHandle and ovrHybridInputFocusState, as
-// they won't be in a public OVR_CAPI.h header for now.
+// Hybrid Apps API forward declaration which won't be in a public OVR_CAPI.h header for now.
+// --------------------------------------------------------------------------
 struct ovrDesktopWindowDesc_;
 typedef struct ovrDesktopWindowDesc_ ovrDesktopWindowDesc;
+
+struct ovrKeyboardDesc_;
+typedef struct ovrKeyboardDesc_ ovrKeyboardDesc;
+
+enum ovrHybridInputFocusType_ ;
+typedef enum ovrHybridInputFocusType_ ovrHybridInputFocusType;
 
 struct ovrHybridInputFocusState_;
 typedef struct ovrHybridInputFocusState_ ovrHybridInputFocusState;
 
 typedef uint32_t ovrDesktopWindowHandle;
+// --------------------------------------------------------------------------
 
 #define OVR_LIST_PRIVATE_APIS(_,X) \
 _(ovrTrackingState, ovr_GetTrackingStateWithSensorData, , (ovrSession session, double absTime, ovrBool latencyMarker, ovrSensorData* sensorData)) \
@@ -151,7 +158,9 @@ _(ovrResult, ovr_InitDesktopWindow, , (ovrSession session, ovrDesktopWindowHandl
 _(ovrResult, ovr_ShowDesktopWindow, , (ovrSession session, const ovrDesktopWindowDesc* windowDesc)) \
 _(ovrResult, ovr_HideDesktopWindow, , (ovrSession session, ovrDesktopWindowHandle windowHandle)) \
 _(ovrResult, ovr_GetHybridInputFocus, , (ovrSession session, ovrControllerType controllerType, ovrHybridInputFocusState* outState)) \
-_(ovrResult, ovr_ShowAvatarHands, , (ovrSession session, ovrBool showHands))
+_(ovrResult, ovr_ShowAvatarHands, , (ovrSession session, ovrBool showHands)) \
+_(ovrResult, ovr_ShowKeyboard, , (ovrSession session, const ovrKeyboardDesc* keyboardDesc)) \
+_(ovrResult, ovr_EnableHybridRaycast, , (ovrSession session, ovrBool enableRaycast))
 
 // clang-format on
 
