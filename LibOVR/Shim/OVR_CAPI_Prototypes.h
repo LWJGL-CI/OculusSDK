@@ -45,6 +45,7 @@ _(ovrResult, ovr_RecenterTrackingOrigin, , (ovrSession session)) \
 _(ovrResult, ovr_SpecifyTrackingOrigin, , (ovrSession session, ovrPosef originPose)) \
 _(void, ovr_ClearShouldRecenterFlag, , (ovrSession session)) \
 _(ovrTrackingState, ovr_GetTrackingState, , (ovrSession session, double absTime, ovrBool latencyMarker)) \
+_(ovrResult, ovr_GetDevicePoses, , (ovrSession session, ovrTrackedDeviceType* deviceTypes, int deviceCount, double absTime, ovrPoseStatef* outDevicePoses)) \
 _(ovrTrackerPose, ovr_GetTrackerPose, , (ovrSession session, unsigned int index)) \
 _(ovrResult, ovr_GetInputState, , (ovrSession session, ovrControllerType controllerType, ovrInputState*)) \
 _(unsigned int, ovr_GetConnectedControllerTypes, , (ovrSession session)) \
@@ -151,16 +152,7 @@ typedef struct ovrHybridInputFocusState_ ovrHybridInputFocusState;
 typedef uint32_t ovrDesktopWindowHandle;
 // --------------------------------------------------------------------------
 
-#define OVR_LIST_PRIVATE_APIS(_,X) \
-_(ovrTrackingState, ovr_GetTrackingStateWithSensorData, , (ovrSession session, double absTime, ovrBool latencyMarker, ovrSensorData* sensorData)) \
-_(ovrResult, ovr_GetDevicePoses, , (ovrSession session, ovrTrackedDeviceType* deviceTypes, int deviceCount, double absTime, ovrPoseStatef* outDevicePoses)) \
-_(ovrResult, ovr_InitDesktopWindow, , (ovrSession session, ovrDesktopWindowHandle* outWindowHandle)) \
-_(ovrResult, ovr_ShowDesktopWindow, , (ovrSession session, const ovrDesktopWindowDesc* windowDesc)) \
-_(ovrResult, ovr_HideDesktopWindow, , (ovrSession session, ovrDesktopWindowHandle windowHandle)) \
-_(ovrResult, ovr_GetHybridInputFocus, , (ovrSession session, ovrControllerType controllerType, ovrHybridInputFocusState* outState)) \
-_(ovrResult, ovr_ShowAvatarHands, , (ovrSession session, ovrBool showHands)) \
-_(ovrResult, ovr_ShowKeyboard, , (ovrSession session, const ovrKeyboardDesc* keyboardDesc)) \
-_(ovrResult, ovr_EnableHybridRaycast, , (ovrSession session, ovrBool enableRaycast))
+#define OVR_LIST_PRIVATE_APIS(_,X)
 
 // clang-format on
 

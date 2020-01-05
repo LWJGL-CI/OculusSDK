@@ -77,15 +77,6 @@ static const uint8_t OculusSDKUniqueIdentifier[] = {
 static const uint8_t OculusSDKUniqueIdentifierXORResult = 0xcb;
 
 // -----------------------------------------------------------------------------------
-// ***** OVR_ENABLE_DEVELOPER_SEARCH
-//
-// If defined then our shared library loading code searches for developer build
-// directories.
-//
-#if !defined(OVR_ENABLE_DEVELOPER_SEARCH)
-#endif
-
-// -----------------------------------------------------------------------------------
 // ***** OVR_BUILD_DEBUG
 //
 // Defines OVR_BUILD_DEBUG when the compiler default debug preprocessor is set.
@@ -208,21 +199,7 @@ static ovrBool OVR_isBundleFolder(const char* filePath) {
 }
 #endif
 
-#if defined(OVR_ENABLE_DEVELOPER_SEARCH)
-
-// Returns true if the path begins with the given prefix.
-// Doesn't support non-ASCII paths, else the return value may be incorrect.
-static int OVR_PathStartsWith(const FilePathCharType* path, const char* prefix) {
-  while (*prefix) {
-    if (tolower((unsigned char)*path++) != tolower((unsigned char)*prefix++))
-      return ovrFalse;
-  }
-
-  return ovrTrue;
-}
-
-#endif
-
+#if !defined(_WIN32)
 static ovrBool OVR_GetCurrentWorkingDirectory(
     FilePathCharType* directoryPath,
     size_t directoryPathCapacity) {
@@ -368,39 +345,7 @@ static ovrBool OVR_GetCurrentApplicationDirectory(
 
   return ovrFalse;
 }
-
-#if defined(_WIN32) || defined(OVR_ENABLE_DEVELOPER_SEARCH) // Used only in these cases
-
-// Get the file path to the current module's (DLL or EXE) directory within the current process.
-// Will be different from the process module handle if the current module is a DLL and is in a
-// different directory than the EXE module.
-// If successful then directoryPath will be valid and ovrTrue is returned, else directoryPath will
-// be empty and ovrFalse is returned.
-static ovrBool OVR_GetCurrentModuleDirectory(
-    FilePathCharType* directoryPath,
-    size_t directoryPathCapacity,
-    ovrBool appContainer) {
-#if defined(_WIN32)
-  HMODULE hModule;
-  BOOL result = GetModuleHandleExW(
-      GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-      (LPCWSTR)(uintptr_t)OVR_GetCurrentModuleDirectory,
-      &hModule);
-  if (result)
-    OVR_GetCurrentApplicationDirectory(directoryPath, directoryPathCapacity, ovrTrue, hModule);
-  else
-    directoryPath[0] = 0;
-
-  (void)appContainer;
-
-  return directoryPath[0] ? ovrTrue : ovrFalse;
-#else
-  return OVR_GetCurrentApplicationDirectory(
-      directoryPath, directoryPathCapacity, appContainer, NULL);
-#endif
-}
-
-#endif
+#endif // !defined(_WIN32)
 
 #if defined(_WIN32)
 
@@ -432,7 +377,7 @@ CertificateEntry NewCertificateChain[ExpectedNumCertificates] = {
 #define CertificateChainCount 1
 CertificateEntry* AllowedCertificateChains[CertificateChainCount] = {NewCertificateChain};
 
-typedef WINCRYPT32API DWORD(WINAPI* PtrCertGetNameStringW)(
+typedef DWORD(WINAPI* PtrCertGetNameStringW)(
     PCCERT_CONTEXT pCertContext,
     DWORD dwType,
     DWORD dwFlags,
@@ -688,7 +633,6 @@ static ModuleHandleType OVR_FindLibraryPath(
     size_t libraryPathCapacity,
     ovrResult* result) {
   ModuleHandleType moduleHandle;
-  int printfResult;
   FilePathCharType developerDir[OVR_MAX_PATH] = {'\0'};
 
 #if defined(_MSC_VER)
@@ -712,14 +656,10 @@ static ModuleHandleType OVR_FindLibraryPath(
 
   *result = ovrError_LibLoad;
   moduleHandle = ModuleHandleTypeNull;
-  if (libraryPathCapacity)
+  if (libraryPathCapacity) {
     libraryPath[0] = '\0';
+  }
 
-// Note: OVR_ENABLE_DEVELOPER_SEARCH is deprecated in favor of the simpler LIBOVR_DLL_DIR, as the
-// edge
-// case uses of the former created some complications that may be best solved by simply using a
-// LIBOVR_DLL_DIR
-// environment variable which the user can set in their debugger or system environment variables.
 #if (defined(_MSC_VER) || defined(_WIN32)) && !defined(OVR_FILE_PATH_SEPARATOR)
 #define OVR_FILE_PATH_SEPARATOR "\\"
 #else
@@ -752,132 +692,15 @@ static ModuleHandleType OVR_FindLibraryPath(
     }
   }
 
-// Support checking for a developer library location override via the OVR_SDK_ROOT environment
-// variable.
-// This pathway is deprecated in favor of using LIBOVR_DLL_DIR instead.
-#if defined(OVR_ENABLE_DEVELOPER_SEARCH)
-  if (!developerDir[0]) // If not already set by LIBOVR_DLL_PATH...
   {
-    // __FILE__ maps to <sdkRoot>/LibOVR/Src/OVR_CAPIShim.c
-    char sdkRoot[OVR_MAX_PATH];
-    char* pLibOVR;
     size_t i;
 
-    // We assume that __FILE__ returns a full path, which isn't the case for some compilers.
-    // Need to compile with /FC under VC++ for __FILE__ to expand to the full file path.
-    // NOTE: This needs to be fixed on Mac. __FILE__ is not expanded to full path under clang.
-    OVR_strlcpy(sdkRoot, __FILE__, sizeof(sdkRoot));
-    for (i = 0; sdkRoot[i]; ++i)
-      sdkRoot[i] = (char)tolower(sdkRoot[i]); // Microsoft doesn't maintain case.
-    pLibOVR = strstr(sdkRoot, "libovr");
-    if (pLibOVR && (pLibOVR > sdkRoot))
-      pLibOVR[-1] = '\0';
-    else
-      sdkRoot[0] = '\0';
-
-    if (sdkRoot[0]) {
-      // We want to use a developer version of the library only if the application is also being
-      // executed from
-      // a developer location. Ideally we would do this by checking that the relative path from the
-      // executable to
-      // the shared library is the same at runtime as it was when the executable was first built,
-      // but we don't have
-      // an easy way to do that from here and it would require some runtime help from the
-      // application code.
-      // Instead we verify that the application is simply in the same developer tree that was was
-      // when built.
-      // We could put in some additional logic to make it very likely to know if the EXE is in its
-      // original location.
-      FilePathCharType modulePath[OVR_MAX_PATH];
-      const ovrBool pathMatch = OVR_GetCurrentModuleDirectory(modulePath, OVR_MAX_PATH, ovrTrue) &&
-          (OVR_PathStartsWith(modulePath, sdkRoot) == ovrTrue);
-      if (pathMatch == ovrFalse) {
-        sdkRoot[0] = '\0'; // The application module is not in the developer tree, so don't try to
-        // use the developer shared library.
-      }
-    }
-
-    if (sdkRoot[0]) {
-
-#ifndef CONFIG_VARIANT
-#define CONFIG_VARIANT
-#endif
-
-#if defined(OVR_BUILD_DEBUG)
-      const char* pConfigDirName = "Debug" CONFIG_VARIANT;
-#else
-      const char* pConfigDirName = "Release" CONFIG_VARIANT;
-#endif
-
-#undef CONFIG_VARIANT
-
-#if defined(_MSC_VER)
-#if defined(_WIN64)
-      const char* pArchDirName = "x64";
-#else
-      const char* pArchDirName = "Win32";
-#endif
-#else
-#if defined(__x86_64__)
-      const char* pArchDirName = "x86_64";
-#else
-      const char* pArchDirName = "i386";
-#endif
-#endif
-
-#if defined(_MSC_VER) && (_MSC_VER == 1600)
-      const char* pCompilerVersion = "VS2010";
-#elif defined(_MSC_VER) && (_MSC_VER == 1700)
-      const char* pCompilerVersion = "VS2012";
-#elif defined(_MSC_VER) && (_MSC_VER == 1800)
-      const char* pCompilerVersion = "VS2013";
-#elif defined(_MSC_VER) && (_MSC_VER == 1900)
-      const char* pCompilerVersion = "VS2015";
-#elif defined(_MSC_VER) && (_MSC_VER > 1900)
-      const char* pCompilerVersion = "VS2017";
-#endif
-
-#if defined(_WIN32)
-      int count = swprintf_s(
-          developerDir,
-          OVR_MAX_PATH,
-          L"%hs\\LibOVR\\Lib\\Windows\\%hs\\%hs\\%hs\\",
-          sdkRoot,
-          pArchDirName,
-          pConfigDirName,
-          pCompilerVersion);
-#elif defined(__APPLE__)
-      // Apple/XCode doesn't let you specify an arch in build paths, which is OK if we build a
-      // universal binary.
-      (void)pArchDirName;
-      int count =
-          snprintf(developerDir, OVR_MAX_PATH, "%s/LibOVR/Lib/Mac/%s/", sdkRoot, pConfigDirName);
-#else
-      int count = snprintf(
-          developerDir,
-          OVR_MAX_PATH,
-          "%s/LibOVR/Lib/Linux/%s/%s/",
-          sdkRoot,
-          pArchDirName,
-          pConfigDirName);
-#endif
-
-      if ((count < 0) ||
-          (count >=
-           (int)OVR_MAX_PATH)) // If there was an error or capacity overflow... clear the string.
-      {
-        developerDir[0] = '\0';
-      }
-    }
-  }
-#endif // OVR_ENABLE_DEVELOPER_SEARCH
-
-  {
 #if !defined(_WIN32)
     FilePathCharType cwDir[OVR_MAX_PATH]; // Will be filled in below.
     FilePathCharType appDir[OVR_MAX_PATH];
+    OVR_GetCurrentWorkingDirectory(cwDir, sizeof(cwDir) / sizeof(cwDir[0]));
+    OVR_GetCurrentApplicationDirectory(appDir, sizeof(appDir) / sizeof(appDir[0]), ovrTrue, NULL);
 #endif
-    size_t i;
 
 #if defined(_WIN32)
     // On Windows, only search the developer directory and the usual path
@@ -944,11 +767,6 @@ static ModuleHandleType OVR_FindLibraryPath(
     directoryArray[4] = "/usr/lib/";
 #endif
 
-#if !defined(_WIN32)
-    OVR_GetCurrentWorkingDirectory(cwDir, sizeof(cwDir) / sizeof(cwDir[0]));
-    OVR_GetCurrentApplicationDirectory(appDir, sizeof(appDir) / sizeof(appDir[0]), ovrTrue, NULL);
-#endif
-
     // Versioned file expectations.
     //     Windows: LibOVRRT<BIT_DEPTH>_<PRODUCT_VERSION>_<MAJOR_VERSION>.dll
     //     // Example: LibOVRRT64_1_1.dll -- LibOVRRT 64 bit, product 1, major version 1,
@@ -992,7 +810,7 @@ static ModuleHandleType OVR_FindLibraryPath(
 
     for (i = 0; i < sizeof(directoryArray) / sizeof(directoryArray[0]); ++i) {
 #if defined(_WIN32)
-      printfResult = swprintf(
+      int printfResult = swprintf(
           libraryPath,
           libraryPathCapacity,
           L"%lsLibOVRRT%hs_%d.dll",
@@ -1019,7 +837,7 @@ static ModuleHandleType OVR_FindLibraryPath(
       // application
       // bundle itself. A problem with that is that it doesn't support vendor-supplied updates to
       // the framework.
-      printfResult =
+      int printfResult =
           snprintf(libraryPath, libraryPathCapacity, "%sLibOVRRT.dylib", directoryArray[i]);
 
 #else // Unix
@@ -1032,7 +850,7 @@ static ModuleHandleType OVR_FindLibraryPath(
       // depend on LD_LIBRARY_PATH be globally modified, partly due to potentialy security issues.
       // Currently we check the current application directory, current working directory, and then
       // /usr/lib and possibly others.
-      printfResult = snprintf(
+      int printfResult = snprintf(
           libraryPath,
           libraryPathCapacity,
           "%slibOVRRT%s.so.%d",
@@ -1305,6 +1123,7 @@ OVR_PUBLIC_FUNCTION(ovrHmdDesc) ovr_GetHmdDesc(ovrSession session) {
   return API.ovr_GetHmdDesc.Ptr(session);
 }
 
+
 OVR_PUBLIC_FUNCTION(unsigned int) ovr_GetTrackerCount(ovrSession session) {
   if (!API.ovr_GetTrackerCount.Ptr) {
     return 0;
@@ -1336,64 +1155,6 @@ OVR_PUBLIC_FUNCTION(void) ovr_Destroy(ovrSession session) {
   API.ovr_Destroy.Ptr(session);
 }
 
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_InitDesktopWindow(ovrSession session, ovrDesktopWindowHandle* outWindowHandle) {
-  if (!API.ovr_InitDesktopWindow.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_InitDesktopWindow.Ptr(session, outWindowHandle);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_ShowDesktopWindow(ovrSession session, const ovrDesktopWindowDesc* windowDesc) {
-  if (!API.ovr_ShowDesktopWindow.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_ShowDesktopWindow.Ptr(session, windowDesc);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_HideDesktopWindow(ovrSession session, ovrDesktopWindowHandle windowHandle) {
-  if (!API.ovr_HideDesktopWindow.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_HideDesktopWindow.Ptr(session, windowHandle);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_GetHybridInputFocus(
-    ovrSession session,
-    ovrControllerType controllerType,
-    ovrHybridInputFocusState* outState) {
-  if (!API.ovr_GetHybridInputFocus.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_GetHybridInputFocus.Ptr(session, controllerType, outState);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_ShowAvatarHands(ovrSession session, ovrBool showHands) {
-  if (!API.ovr_ShowAvatarHands.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_ShowAvatarHands.Ptr(session, showHands);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_ShowKeyboard(ovrSession session, const ovrKeyboardDesc* keyboardDesc) {
-  if (!API.ovr_ShowKeyboard.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_ShowKeyboard.Ptr(session, keyboardDesc);
-}
-
-OVR_PUBLIC_FUNCTION(ovrResult)
-ovr_EnableDashRaycast(ovrSession session, ovrBool enableRaycast) {
-  if (!API.ovr_EnableHybridRaycast.Ptr) {
-    return ovrError_ServiceError;
-  }
-  return API.ovr_EnableHybridRaycast.Ptr(session, enableRaycast);
-}
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetSessionStatus(ovrSession session, ovrSessionStatus* sessionStatus) {
@@ -1430,6 +1191,7 @@ ovr_EnableExtension(ovrSession session, ovrExtensions extension) {
     return ovrError_NotInitialized;
   return API.ovr_EnableExtension.Ptr(session, extension);
 }
+
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_SetTrackingOriginType(ovrSession session, ovrTrackingOrigin origin) {
@@ -1485,22 +1247,6 @@ ovr_GetDevicePoses(
   return API.ovr_GetDevicePoses.Ptr(session, deviceTypes, deviceCount, absTime, outDevicePoses);
 }
 
-OVR_PUBLIC_FUNCTION(ovrTrackingState)
-ovr_GetTrackingStateWithSensorData(
-    ovrSession session,
-    double absTime,
-    ovrBool latencyMarker,
-    ovrSensorData* sensorData) {
-  if (!API.ovr_GetTrackingStateWithSensorData.Ptr) {
-    ovrTrackingState nullTrackingState;
-    memset(&nullTrackingState, 0, sizeof(nullTrackingState));
-    if (sensorData)
-      memset(&sensorData, 0, sizeof(sensorData));
-    return nullTrackingState;
-  }
-
-  return API.ovr_GetTrackingStateWithSensorData.Ptr(session, absTime, latencyMarker, sensorData);
-}
 
 OVR_PUBLIC_FUNCTION(ovrTrackerPose)
 ovr_GetTrackerPose(ovrSession session, unsigned int trackerPoseIndex) {
@@ -1771,7 +1517,7 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_GetAudioDeviceInGuid(GUID* deviceInGuid) {
   return API.ovr_GetAudioDeviceInGuid.Ptr(deviceInGuid);
 }
 
-#endif
+#endif // _WIN32
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_CreateTextureSwapChainGL(
@@ -1826,7 +1572,7 @@ ovr_GetMirrorTextureBufferGL(ovrSession session, ovrMirrorTexture mirror, unsign
   return API.ovr_GetMirrorTextureBufferGL.Ptr(session, mirror, texId);
 }
 
-#if !defined(__APPLE__)
+#if defined(_WIN32)
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetInstanceExtensionsVk(
     ovrGraphicsLuid luid,
@@ -1914,7 +1660,7 @@ ovr_GetMirrorTextureBufferVk(
 
   return API.ovr_GetMirrorTextureBufferVk.Ptr(session, mirrorTexture, out_Image);
 }
-#endif // __APPLE__
+#endif // defined (_WIN32)
 
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainLength(ovrSession session, ovrTextureSwapChain chain, int* length) {

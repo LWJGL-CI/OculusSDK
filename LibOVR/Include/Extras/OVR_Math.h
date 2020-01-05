@@ -4436,10 +4436,10 @@ struct FovPort {
     FovPort uncantedFov = cantedFov;
 
     // make 3D vectors from the FovPorts projected to z=1 plane
-    Vector3f leftUp = Vector3f(cantedFov.LeftTan, cantedFov.UpTan, 1.0f);
-    Vector3f rightUp = Vector3f(-cantedFov.RightTan, cantedFov.UpTan, 1.0f);
-    Vector3f leftDown = Vector3f(cantedFov.LeftTan, -cantedFov.DownTan, 1.0f);
-    Vector3f rightDown = Vector3f(-cantedFov.RightTan, -cantedFov.DownTan, 1.0f);
+    Vector3f leftUp = Vector3f(cantedFov.LeftTan, -cantedFov.UpTan, 1.0f);
+    Vector3f rightUp = Vector3f(-cantedFov.RightTan, -cantedFov.UpTan, 1.0f);
+    Vector3f leftDown = Vector3f(cantedFov.LeftTan, cantedFov.DownTan, 1.0f);
+    Vector3f rightDown = Vector3f(-cantedFov.RightTan, cantedFov.DownTan, 1.0f);
 
     // rotate these vectors using the canting specified
     leftUp = canting.Rotate(leftUp);
@@ -4458,8 +4458,8 @@ struct FovPort {
     rightDown /= OVRMath_Max(rightDown.z, kMinValidZ);
 
     // generate new FovTans as "bounding box" values
-    uncantedFov.UpTan = OVRMath_Max(leftUp.y, rightUp.y);
-    uncantedFov.DownTan = OVRMath_Max(-leftDown.y, -rightDown.y);
+    uncantedFov.UpTan = OVRMath_Max(-leftUp.y, -rightUp.y);
+    uncantedFov.DownTan = OVRMath_Max(leftDown.y, rightDown.y);
     uncantedFov.LeftTan = OVRMath_Max(leftUp.x, leftDown.x);
     uncantedFov.RightTan = OVRMath_Max(-rightDown.x, -rightUp.x);
 
