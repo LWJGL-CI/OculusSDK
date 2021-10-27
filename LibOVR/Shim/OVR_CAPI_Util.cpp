@@ -3,14 +3,14 @@
 PublicHeader:   OVR_CAPI_Util.c
 Copyright   :   Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
 
-Licensed under the Oculus VR Rift SDK License Version 3.3 (the "License");
+Licensed under the Oculus Master SDK License Version 1.0 (the "License");
 you may not use the Oculus VR Rift SDK except in compliance with the License,
 which is provided at the time of installation or download, or which
 otherwise accompanies this software in either electronic or hard copy form.
 
 You may obtain a copy of the License at
 
-http://www.oculusvr.com/licenses/LICENSE-3.3
+https://developer.oculus.com/licenses/oculusmastersdk-1.0
 
 Unless required by applicable law or agreed to in writing, the Oculus VR SDK
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,7 +35,6 @@ limitations under the License.
                : (((dbl) - (double)(int)(dbl)) <= -0.5 ? (int)(dbl) : (int)((dbl)-0.5))
 #endif
 
-
 #if defined(_MSC_VER)
 #include <emmintrin.h>
 #pragma intrinsic(_mm_pause)
@@ -45,14 +44,8 @@ limitations under the License.
 #include <windows.h>
 #endif
 
-#if defined(OVR_DLL_BUILD) && defined(OVR_OPENXR_SUPPORT_ENABLED)
-
-// This forces transitive export of the symbols marked for export in OVR_OpenXR_Impl.cpp:
-__pragma(comment(linker, "/INCLUDE:" OVR_ON32("_") "exported_openxr_version"))
-#endif // defined(OVR_DLL_BUILD) && defined(OVR_OPENXR_SUPPORT_ENABLED)
-
-    template <typename T>
-    T ovrMax(T a, T b) {
+template <typename T>
+T ovrMax(T a, T b) {
   return a > b ? a : b;
 }
 template <typename T>
@@ -264,7 +257,6 @@ OVR_PUBLIC_FUNCTION(ovrDetectResult) ovr_Detect(int timeoutMilliseconds) {
   result.IsOculusServiceRunning = ovrTrue;
   result.IsOculusHMDConnected = ovrTrue;
 #endif // OSX_UNIMPLEMENTED
-
 
   return result;
 }

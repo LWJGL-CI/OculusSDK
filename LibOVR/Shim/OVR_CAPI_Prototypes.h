@@ -101,7 +101,9 @@ _(ovrResult, ovr_RequestBoundaryVisible, , (ovrSession session, ovrBool visible)
 _(ovrResult, ovr_GetPerfStats, , (ovrSession session, ovrPerfStats* outPerfStats)) \
 _(ovrResult, ovr_ResetPerfStats, , (ovrSession session))\
 _(ovrResult, ovr_GetExternalCameras, , (ovrSession session, ovrExternalCamera* outCameras, unsigned int* outCameraCount))\
-_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics ))
+_(ovrResult, ovr_SetExternalCameraProperties, , (ovrSession session, const char* name, const ovrCameraIntrinsics* const intrinsics, const ovrCameraExtrinsics* const extrinsics )) \
+_(ovrHmdColorDesc, ovr_GetHmdColorDesc, , (ovrSession session)) \
+_(ovrResult, ovr_SetClientColorDesc, , (ovrSession session, const ovrHmdColorDesc* hmdColorDesc))
 
 #if defined (_WIN32)
 #define OVR_LIST_WIN32_APIS(_,X) \

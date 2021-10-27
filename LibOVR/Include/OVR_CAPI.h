@@ -10,17 +10,13 @@
 #define OVR_CAPI_h
 
 #include "OVR_CAPI_Keys.h"
-#include "OVR_Version.h"
 #include "OVR_ErrorCode.h"
+#include "OVR_Version.h"
 
 #if !defined(_WIN32)
 #include <sys/types.h>
 #endif
 
-
-// Turn on OpenXR support on all builds
-// Note: we're not shipping the loader, only exposing xrNegotiateLoaderRuntimeInterface
-#define OVR_OPENXR_SUPPORT_ENABLED
 
 #include <stdint.h>
 
@@ -334,6 +330,11 @@ typedef struct OVR_ALIGNAS(4) ovrVector4f_ {
   float x, y, z, w;
 } ovrVector4f;
 
+/// A 4D vector with int16_t components.
+typedef struct OVR_ALIGNAS(4) ovrVector4s_ {
+  int16_t x, y, z, w;
+} ovrVector4s;
+
 /// A 4x4 matrix with float elements.
 typedef struct OVR_ALIGNAS(4) ovrMatrix4f_ {
   float M[4][4];
@@ -377,13 +378,8 @@ typedef struct OVR_ALIGNAS(4) ovrFovPort_ {
 // ***** HMD Types
 
 /// Enumerates all HMD types that we support.
-///
-/// The currently released developer kits are ovrHmd_DK1 and ovrHmd_DK2.
-/// The other enumerations are for internal use only.
 typedef enum ovrHmdType_ {
   ovrHmd_None = 0,
-  ovrHmd_DK1 = 3,
-  ovrHmd_DKHD = 4,
   ovrHmd_DK2 = 6,
   ovrHmd_CB = 8,
   ovrHmd_Other = 9,
@@ -393,7 +389,8 @@ typedef enum ovrHmdType_ {
   ovrHmd_ES11 = 13,
   ovrHmd_CV1 = 14,
   ovrHmd_RiftS = 16,
-
+  ovrHmd_Quest = 19,
+  ovrHmd_Quest2 = 20,
   ovrHmd_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrHmdType;
 
@@ -482,6 +479,92 @@ typedef enum ovrTrackingOrigin_ {
   ovrTrackingOrigin_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTrackingOrigin;
 
+/// Color space types for HMDs
+///
+/// Until ovr_SetClientColorDesc is called, for backwards compatibility, a new session will start
+/// with 'ovrColorSpace_Unknown' which will default to 'ovrColorSpace_Rift_CV1'. This assumes the
+/// app visuals were authored to be viewed in a Rift CV1 HMD. Therefore it does the following:
+/// - For Rift CV1, assumes submitted images are authored for CV1 color space, and keeps them as is.
+/// - For Rift S and Quest (via Oculus Link), converts images to reproduce CV1's color space.
+///
+/// This API only handles color-space remapping. Unless specified, all color spaces use D65 white
+/// point. This API will not affect brightness, contrast or gamma curves. Some of these aspects such
+/// as gamma, is handled by the texture format being used. From the GPU samplers' point-of-view,
+/// each texture will continue to be treated as linear luminance including the sRGB format which is
+/// converted to linear by the texture sampler.
+///
+/// It is recommended that content is authored for the Rift CV1 color space as it has a wider color
+/// gamut than the Rift S. If content is authored to a narrow color space such as "Rec. 709" or
+/// "Rift S", this can lead to content looking "dull", "washed out" or "desaturated" when viewed in
+/// a wider-color-space-capable device such as Rift CV1 and Quest. This is because the colors stored
+/// in the submitted images will no longer be able to hit the deeper saturated chromaticity values.
+///
+/// Using 'ovrColorSpace_Unmanaged' will force the runtime to skip color correction on to the
+/// provided content. This is not recommended unless the app developer is sure about what they're
+/// doing. 'ovrColorSpace_Unmanaged' is mostly useful for research & experimentation, but not for
+/// software distribution. This is because unless the client is applying the necessary corrections
+/// for each HMD type, the results seen in the HMD will be uncalibrated. This is especially true for
+/// future HMDs where the color space is not yet known or defined, leading to colors that might look
+/// too dull or saturated.
+///
+/// Requested rectilinear-mirror outputs are composited without any color space adjustment.
+/// However, if client requests a post-distortion (i.e. non-rectilinear) mirror output, it will be
+/// provided with the same color adjustment that was applied for the HMD output. Therefore,
+/// post-distortion mirror output are not guaranteed to have acceptable color-space accuracy
+/// for desktop viewing.
+///
+/// Color Space Details with Chromaticity Primaries in CIE 1931 xy:
+///
+/// Color Space: Rift CV1 between P3 & Adobe RGB using D75 white point
+/// Red  : (0.666, 0.334)
+/// Green: (0.238, 0.714)
+/// Blue : (0.139, 0.053)
+/// White: (0.298, 0.318)
+///
+/// Color Space: Quest similar to Rift CV1 using D75 white point
+/// Red  : (0.661, 0.338)
+/// Green: (0.228, 0.718)
+/// Blue : (0.142, 0.042)
+/// White: (0.298, 0.318)
+///
+/// Color Space: Rift S similar to Rec 709 using D75
+/// Red  : (0.640, 0.330)
+/// Green: (0.292, 0.586)
+/// Blue : (0.156, 0.058)
+/// White: (0.298, 0.318)
+///
+/// Color Space: P3, similar to DCI-P3, but using D65 white point instead.
+/// Red  : (0.680, 0.320)
+/// Green: (0.265, 0.690)
+/// Blue : (0.150, 0.060)
+/// White: (0.313, 0.329)
+///
+/// Note: Due to LCD limitations, the Rift S display will not be able to meaningfully differentiate
+/// brightness levels below 13 out of 255 for 8-bit sRGB or 0.0015 out of 1.0 max for linear-RGB
+/// shader output values. To that end, it is recommended that reliance on a dark and narrow gamut is
+/// avoided, and the content is instead spread across a larger brightness range when possible.
+///
+typedef enum ovrColorSpace_ {
+  ovrColorSpace_Unknown = 0, ///< Default value until client sets calls ovr_SetClientColorDesc
+  ovrColorSpace_Unmanaged = 1, ///< See notes above. No correction, i.e. color space of active HMD
+  ovrColorSpace_Rift_CV1 = 2, ///< See notes above. Unique color space.
+  ovrColorSpace_Rift_S = 3, ///< See notes above. Unique color space.
+  ovrColorSpace_Quest = 4, ///< See notes above. Unique color space.
+  ovrColorSpace_Rec_2020 = 5, ///< Standard Rec. 2020 chromaticities
+  ovrColorSpace_Rec_709 = 6, ///< Standard Rec. 709 chromaticities, similar to sRGB
+  ovrColorSpace_P3 = 7, ///< See notes above
+  ovrColorSpace_Adobe_RGB = 8, ///< Standard AdobeRGB chromaticities
+  ovrColorSpace_Count = 9,
+
+  ovrColorSpace_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
+} ovrColorSpace;
+
+typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrHmdColorDesc_ {
+  /// Approximate color space the HMD display can output.
+  /// Use ColorPrimaries for more precise color space definition including white point (e.g. DN75)
+  ovrColorSpace ColorSpace;
+  OVR_UNUSED_STRUCT_PAD(pad0, 4) ///< \internal struct pad.
+} ovrHmdColorDesc;
 
 /// Identifies a graphics device in a platform-specific way.
 /// For Windows this is a LUID type.
@@ -700,9 +783,9 @@ typedef struct OVR_ALIGNAS(4) ovrViewScaleDesc_ {
 /// \see ovrTextureSwapChainDesc
 ///
 typedef enum ovrTextureType_ {
-  ovrTexture_2D, ///< 2D textures.
-  ovrTexture_2D_External, ///< Application-provided 2D texture. Not supported on PC.
-  ovrTexture_Cube, ///< Cube maps. ovrTextureSwapChainDesc::ArraySize must be 6 for this type.
+  ovrTexture_2D = 0, ///< 2D textures or texture arrays.
+  ovrTexture_2D_External = 1, ///< Application-provided 2D texture. Not supported on PC.
+  ovrTexture_Cube = 2, ///< Cube maps. ovrTextureSwapChainDesc::ArraySize must be 6 for this type.
   ovrTexture_Count,
   ovrTexture_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrTextureType;
@@ -743,7 +826,7 @@ typedef enum ovrTextureFormat_ {
   OVR_FORMAT_R8G8B8A8_UNORM = 4,
   OVR_FORMAT_R8G8B8A8_UNORM_SRGB = 5,
   OVR_FORMAT_B8G8R8A8_UNORM = 6,
-  OVR_FORMAT_B8G8R8_UNORM = 27,
+  OVR_FORMAT_B8G8R8_UNORM = 27, ///< Not currently supported.
   OVR_FORMAT_B8G8R8A8_UNORM_SRGB = 7, ///< Not supported for OpenGL applications
   OVR_FORMAT_B8G8R8X8_UNORM = 8, ///< Not supported for OpenGL applications
   OVR_FORMAT_B8G8R8X8_UNORM_SRGB = 9, ///< Not supported for OpenGL applications
@@ -809,11 +892,12 @@ typedef enum ovrTextureMiscFlags_ {
 ///
 /// \see ovr_CreateTextureSwapChainDX
 /// \see ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainVk
 ///
 typedef struct ovrTextureSwapChainDesc_ {
-  ovrTextureType Type; ///< Must be ovrTexture_2D
+  ovrTextureType Type; ///< Must be ovrTexture_2D or ovrTexture_Cube.
   ovrTextureFormat Format;
-  int ArraySize; ///< Must be 6 for ovrTexture_Cube, 1 for other types.
+  int ArraySize; ///< Must be 6 for ovrTexture_Cube, size of texture array otherwise.
   int Width;
   int Height;
   int MipLevels;
@@ -1131,6 +1215,7 @@ typedef enum ovrControllerType_ {
   ovrControllerType_Object2 = 0x0400,
   ovrControllerType_Object3 = 0x0800,
 
+
   ovrControllerType_Active = 0xffffffff, ///< Operate on or query whichever controller is active.
 
   ovrControllerType_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
@@ -1279,9 +1364,9 @@ typedef struct ovrInputState_ {
 
   /// Left and right finger trigger values (ovrHand_Left and ovrHand_Right), in range 0.0 to 1.0f.
   /// No deadzone or filter
-  /// This has been formally named "Grip Button". We retain the name HandTrigger for backwards code
-  /// compatibility.
-  /// User-facing documentation should refer to it as the Grip Button or simply Grip.
+  /// This has been formally named simply "Trigger". We retain the name IndexTrigger for backwards
+  /// code compatibility.
+  /// User-facing documentation should refer to it as the Trigger.
   float IndexTriggerRaw[ovrHand_Count];
 
   /// Left and right hand trigger values (ovrHand_Left and ovrHand_Right), in the range 0.0 to 1.0f.
@@ -1297,6 +1382,8 @@ typedef struct ovrInputState_ {
   ovrVector2f ThumbstickRaw[ovrHand_Count];
 
 } ovrInputState;
+
+
 
 typedef struct ovrCameraIntrinsics_ {
   /// Time in seconds from last change to the parameters
@@ -1633,6 +1720,33 @@ OVR_PUBLIC_FUNCTION(ovrResult) ovr_IdentifyClient(const char* identity);
 ///
 /// Handles the enumeration, creation, destruction, and properties of an HMD (head-mounted display).
 ///@{
+
+/// Returns native color space information about the current HMD.
+///
+/// ovr_Initialize must be called prior to calling this function, otherwise call will fail.
+///
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create() or NULL.
+///
+/// \return Returns an ovrHmdColorDesc.
+///
+OVR_PUBLIC_FUNCTION(ovrHmdColorDesc) ovr_GetHmdColorDesc(ovrSession session);
+
+/// Sets the color space actively being used by the client app.
+///
+/// This value does not have to follow the color space provided in ovr_GetHmdColorDesc. It should
+/// reflect the color space the final rendered frame the client has submitted to the SDK.
+/// If this function is never called, the session will keep using the default color space deemed
+/// appropriate by the runtime. See remarks in ovrColorSpace enum for more info on default behavior.
+///
+/// ovr_Initialize must be called prior to calling this function, otherwise call will fail.
+///
+/// \param[in] session Specifies an ovrSession previously returned by ovr_Create() or NULL.
+/// \param[in] colorDesc Specifies the color description to use for the current HMD.
+///
+/// \return Returns an ovrResult indicating success or failure.
+///
+OVR_PUBLIC_FUNCTION(ovrResult)
+ovr_SetClientColorDesc(ovrSession session, const ovrHmdColorDesc* colorDesc);
 
 /// Returns information about the current HMD.
 ///
@@ -2012,6 +2126,7 @@ ovr_GetTrackerPose(ovrSession session, unsigned int trackerPoseIndex);
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetInputState(ovrSession session, ovrControllerType controllerType, ovrInputState* inputState);
 
+
 /// Returns controller types connected to the system OR'ed together.
 ///
 /// \return A bitmask of ovrControllerTypes connected to the system.
@@ -2093,6 +2208,8 @@ ovr_GetControllerVibrationState(
     ovrSession session,
     ovrControllerType controllerType,
     ovrHapticsPlaybackState* outState);
+
+
 
 /// Tests collision/proximity of position tracked devices (e.g. HMD and/or Touch) against the
 /// Boundary System.
@@ -2314,6 +2431,7 @@ typedef enum ovrLayerType_ {
 
   /// Described by ovrLayerCube
   ovrLayerType_Cube = 10,
+
 
 
 
@@ -2755,7 +2873,6 @@ typedef struct OVR_ALIGNAS(OVR_PTR_SIZE) ovrLayerCube_ {
 } ovrLayerCube;
 
 
-
 /// Union that combines ovrLayer types in a way that allows them
 /// to be used in a polymorphic way.
 typedef union ovrLayer_Union_ {
@@ -2785,9 +2902,10 @@ typedef union ovrLayer_Union_ {
 //@{
 
 /// TextureSwapChain creation is rendering API-specific.
-/// ovr_CreateTextureSwapChainDX and ovr_CreateTextureSwapChainGL can be found in the
-/// rendering API-specific headers, such as OVR_CAPI_D3D.h and OVR_CAPI_GL.h
-
+/// ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL and ovr_CreateTextureSwapChainVk
+/// can be found in the rendering API-specific headers, such as OVR_CAPI_D3D.h, OVR_CAPI_GL.h
+/// and OVR_CAPI_Vk.h.
+///
 /// Gets the number of buffers in an ovrTextureSwapChain.
 ///
 /// \param[in]  session Specifies an ovrSession previously returned by ovr_Create.
@@ -2796,7 +2914,7 @@ typedef union ovrLayer_Union_ {
 ///
 /// \return Returns an ovrResult for which OVR_SUCCESS(result) is false upon error.
 ///
-/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL, ovr_CreateTextureSwapChainVk
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainLength(ovrSession session, ovrTextureSwapChain chain, int* out_Length);
@@ -2809,7 +2927,7 @@ ovr_GetTextureSwapChainLength(ovrSession session, ovrTextureSwapChain chain, int
 ///
 /// \return Returns an ovrResult for which OVR_SUCCESS(result) is false upon error.
 ///
-/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL, ovr_CreateTextureSwapChainVk
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainCurrentIndex(ovrSession session, ovrTextureSwapChain chain, int* out_Index);
@@ -2823,7 +2941,7 @@ ovr_GetTextureSwapChainCurrentIndex(ovrSession session, ovrTextureSwapChain chai
 ///
 /// \return Returns an ovrResult for which OVR_SUCCESS(result) is false upon error.
 ///
-/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL, ovr_CreateTextureSwapChainVk
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_GetTextureSwapChainDesc(
@@ -2847,7 +2965,7 @@ ovr_GetTextureSwapChainDesc(
 ///     - ovrError_TextureSwapChainFull: ovr_CommitTextureSwapChain was called too many times on a
 ///         texture swapchain without calling submit to use the chain.
 ///
-/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL, ovr_CreateTextureSwapChainVk
 ///
 OVR_PUBLIC_FUNCTION(ovrResult)
 ovr_CommitTextureSwapChain(ovrSession session, ovrTextureSwapChain chain);
@@ -2858,7 +2976,7 @@ ovr_CommitTextureSwapChain(ovrSession session, ovrTextureSwapChain chain);
 /// \param[in] chain Specifies the ovrTextureSwapChain to destroy. If it is NULL then
 ///            this function has no effect.
 ///
-/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL
+/// \see ovr_CreateTextureSwapChainDX, ovr_CreateTextureSwapChainGL, ovr_CreateTextureSwapChainVk
 ///
 OVR_PUBLIC_FUNCTION(void)
 ovr_DestroyTextureSwapChain(ovrSession session, ovrTextureSwapChain chain);
@@ -2999,10 +3117,10 @@ ovr_BeginFrame(ovrSession session, long long frameIndex);
 ///
 /// - Layers are drawn in the order they are specified in the array, regardless of the layer type.
 ///
-/// - Layers are not remembered between successive calls to ovr_SubmitFrame. A layer must be
-///   specified in every call to ovr_SubmitFrame or it won't be displayed.
+/// - Layers are not remembered between successive calls to ovr_EndFrame. A layer must be
+///   specified in every call to ovr_EndFrame or it won't be displayed.
 ///
-/// - If a layerPtrList entry that was specified in a previous call to ovr_SubmitFrame is
+/// - If a layerPtrList entry that was specified in a previous call to ovr_EndFrame is
 ///   passed as NULL or is of type ovrLayerType_Disabled, that layer is no longer displayed.
 ///
 /// - A layerPtrList entry can be of any layer type and multiple entries of the same layer type
@@ -3380,7 +3498,8 @@ typedef enum ovrPerfHudMode_ {
   ovrPerfHud_CompRenderTiming = 4, ///< Shows render timing info for OVR compositor
   ovrPerfHud_AswStats = 6, ///< Shows Async Spacewarp-specific info
   ovrPerfHud_VersionInfo = 5, ///< Shows SDK & HMD version Info
-  ovrPerfHud_Count = 7, ///< \internal Count of enumerated elements.
+  ovrPerfHud_LinkPerf = 7, ///< Shows Oculus Link performance.
+  ovrPerfHud_Count = 8, ///< \internal Count of enumerated elements.
   ovrPerfHud_EnumSize = 0x7fffffff ///< \internal Force type int32_t.
 } ovrPerfHudMode;
 

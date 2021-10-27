@@ -10,12 +10,12 @@
 // This file is intended to be independent of the rest of LibOVR and LibOVRKernel and thus
 // has no #include dependencies on either.
 
+#include <float.h>
 #include <math.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <float.h>
 
 #ifndef OVR_EXCLUDE_CAPI_FROM_MATH
 #include "../OVR_CAPI.h" // Required due to a dependence on the ovrFovPort_ declaration.
@@ -2327,13 +2327,14 @@ class Pose {
       "(sizeof(T) == sizeof(double) || sizeof(T) == sizeof(float))");
 
   void ToArray(T* arr) const {
-    T temp[7] = {Rotation.x,
-                 Rotation.y,
-                 Rotation.z,
-                 Rotation.w,
-                 Translation.x,
-                 Translation.y,
-                 Translation.z};
+    T temp[7] = {
+        Rotation.x,
+        Rotation.y,
+        Rotation.z,
+        Rotation.w,
+        Translation.x,
+        Translation.y,
+        Translation.z};
     for (int i = 0; i < 7; i++)
       arr[i] = temp[i];
   }
@@ -3415,6 +3416,9 @@ class Matrix3 {
     return *this;
   }
 
+  // FIXME(T87508049): create a proper copy constructor
+  Matrix3(const Matrix3& b) = default;
+
   void operator=(const Matrix3& b) {
     for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
@@ -4192,10 +4196,24 @@ class Angle {
     res -= x;
     return res;
   }
+  Angle& operator*=(const T& x) {
+    a = a * x;
+    FixRange();
+    return *this;
+  }
+  Angle operator*(const T& x) const {
+    Angle res = *this;
+    res *= x;
+    return res;
+  }
 
   T Distance(const Angle& b) {
     T c = fabs(a - b.a);
     return (c <= ((T)MATH_DOUBLE_PI)) ? c : ((T)MATH_DOUBLE_TWOPI) - c;
+  }
+
+  Angle Lerp(const Angle& b, T f) const {
+    return *this + (b - *this) * f;
   }
 
  private:
